@@ -15,8 +15,10 @@
 // Embedded web page contents
 #include "index.h"    
 
-// Distance reading 
-int range;
+// Distance reading and angle
+int range;     // Latest reading
+int angle = 0; // Initial assumed scan angle
+int roi;       // region of Intrest setting
 
 // Distance history for rolling average
 #define HISTORY_SIZE 10
@@ -33,7 +35,7 @@ String mode = "Near"; // range mode
 //const char* password = "";
 // I keep my settings in a seperate header that is excluded by git
 // .. eg it keeps them private. 
-#include "wifisettings.h" 
+#include "wifisettings.h"  
 
 // Webserver
 WebServer server(80);
@@ -92,13 +94,22 @@ void setup(void){
 
   // HTTP request responders
   server.on("/", handleRoot);           // Main page
+  // Info requests
   server.on("/readRANGE", handleRANGE); // Update of distance
-  server.on("/on", handleOn);           // Sensor Enable
-  server.on("/off", handleOff);         // Sensor Disable
+  server.on("/info", handleInfo);       // info
+  // Settings
   server.on("/near", handleNearMode);   // mode seting
   server.on("/mid", handleMidMode);     // mode seting
   server.on("/far", handleFarMode);     // mode seting
-  server.on("/info", handleInfo);       // info
+  // Commands
+  server.on("/on", handleOn);           // Sensor Enable
+  server.on("/off", handleOff);         // Sensor Disable
+  server.on("/left", handleLeft);       // Sensor Enable
+  server.on("/right", handleRight);     // Sensor Disable
+
+  server.on("/roiplus", handleRoiPlus);   // widen ROI
+  server.on("/roiminus", handleRoiMinus); // narrow ROI
+  
 
   // Start web server
   server.begin();
@@ -108,6 +119,9 @@ void setup(void){
   Wire.begin();
   if (distanceSensor.begin() == true)
     Serial.println("Sensor online!");
+
+  // read sensor initial values
+  roi = distanceSensor.getROIX();
   
   // Clean history..
   for (int x = 0 ; x < HISTORY_SIZE ; x++)
@@ -129,7 +143,9 @@ void handleRoot() {
   digitalWrite(LED, HIGH);   // blink the LED
   String s = MAIN_page; //Read HTML contents
   server.send(200, "text/html", s); //Send web page
-  Serial.println("Sent the main page");
+  Serial.print("Sent the main page to: ");
+  String addy = server.client().remoteIP().toString();
+  Serial.println(addy);
   delay(BLINK);
   digitalWrite(LED, LOW);
   delay(BLINK);
@@ -139,6 +155,9 @@ void handleRoot() {
 }
  
 void handleRANGE() {
+
+  // TODO: JONify and send angle
+  
   if (enabled == true)
   {
     long startTime = millis();
@@ -159,7 +178,7 @@ void handleRANGE() {
     String rangeAverage = String(average);
   
     server.send(200, "text/plane", rangeValue);
-    //  server.send(200, "text/plane", rangeAverage);
+    //server.send(200, "text/plane", rangeAverage);
   }
   else
   {
@@ -239,12 +258,43 @@ void handleFarMode()
   digitalWrite(LED, LOW);
 }
 
+void handleLeft()
+{
+  int newangle = angle - 10; 
+  if (newangle < -180) angle = -180; else angle = newangle;
+  server.send(200, "text/plane", "left");
+}
+
+void handleRight()
+{
+  int newangle = angle + 10; 
+  if (newangle > 180) angle = 180; else angle = newangle;
+  server.send(200, "text/plane", "right");
+}
+
+void handleRoiPlus()
+{
+  int newroi = roi + 1;
+  if (newroi > 16) roi = 16; else roi = newroi;
+  server.send(200, "text/plane", "roiplus");
+  distanceSensor.setROI(roi, roi);
+}
+
+void handleRoiMinus()
+{
+  int newroi = roi - 1;
+  if (newroi < 4) roi = 4; else roi = newroi;
+  server.send(200, "text/plane", "roiminus");
+  distanceSensor.setROI(roi, roi);
+}
+
+
 void handleInfo()
 {
-
   // Todo: JSONify this
 
-  String infoblock = String (distanceSensor.getRangeStatus());
+  String infoblock = "";
+  infoblock += String (distanceSensor.getRangeStatus());
   infoblock += " : ";
   infoblock += String (distanceSensor.getTimingBudgetInMs());
   infoblock += " : ";
@@ -259,6 +309,8 @@ void handleInfo()
   infoblock += String (distanceSensor.getROIX());
   infoblock += " : ";
   infoblock += String (distanceSensor.getROIY());
+  infoblock += " : angle ";
+  infoblock += String (angle);
 
   server.send(200, "text/plane", infoblock);
 }

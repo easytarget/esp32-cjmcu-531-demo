@@ -3,21 +3,37 @@ const char MAIN_page[] PROGMEM = R"=====(
 <html>
 
 <style>
+.plot{
+  width: 400px;
+  height: 256px;
+  background-color: #222;
+  border: none;
+  color: #FFF;
+  padding: none ;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 3px;
+  margin-bottom: 6px;
+  cursor: crosshair;
+}
 .button{
   border-radius: 20%;
   background-color: #056016;
   border: none;
   color: #FFF;
   padding: 3px 6px ;
-  text-align: center;
+  text-align: left;
   text-decoration: none;
   display: inline-block;
   margin: 3px 6px;
   cursor: pointer;
 }
 .card{
-  max-width: 400px;
-  min-height: 250px;
+  max-width: 450px;
+  min-height: 600px;
   background: #02b875;
   padding: 30px;
   padding-top: 2px;
@@ -43,10 +59,12 @@ const char MAIN_page[] PROGMEM = R"=====(
 
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
-    <hr style="background: #056016; border: none;">
+    <!--<hr style="background: #056016; border: 1px;">-->
+    <hr>
     <h1>Range (mm): <span id="RANGEValue" style="color: #056016">Connecting</span></h1>
     <h2>Status: <span id="INFOValue" style="color: #056016">Unset</span></h2>
-    <br>
+    <div class="plot">Plot Goes Here</div>
+    <hr>
      <div style="text-align: center;">
       Sensitivity&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/near')">Near</button>
@@ -57,12 +75,26 @@ const char MAIN_page[] PROGMEM = R"=====(
     </div>
     <br>
     <div style="text-align: center;">
+      ROI&nbsp;&nbsp;::&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/roiminus')">Smaller</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/roiplus')">Bigger</button>
+    </div>
+    <br>
+    <div style="text-align: center;">
+      Rotation&nbsp;&nbsp;::&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/left')">left</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/right')">Right</button>
+    </div>
+    <br>
+    <div style="text-align: center;">
       Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/on')">On</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/off')">Off</button>
     </div>
-    <br>
+    <hr>
     <p style="text-align: right;">Brought to you by: <a href="https://easytarget.org/">easytarget.org</a>
   </div>
 <script>
