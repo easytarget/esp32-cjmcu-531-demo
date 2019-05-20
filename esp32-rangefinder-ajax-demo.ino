@@ -30,12 +30,16 @@ bool enabled = false; // main enabled/disabled thing
 String mode = "Near"; // range mode
 
 // Wifi
-//Enter your SSID and PASSWORD
-//const char* ssid = "";
-//const char* password = "";
-// I keep my settings in a seperate header that is excluded by git
-// .. eg it keeps them private. 
-#include "wifisettings.h"  
+#if __has_include("mywifi.h")
+  // I keep my settings in a seperate header file that is not checked into github
+  #include "mywifi.h"
+#else
+  // Leave as is to create an accesspoint, or set ACCESSPOINT 
+  //  to false and supply your networks SSID and PASSWORD.
+  #define ACCESSPOINT true
+  const char* ssid = "VL53L0X";
+  const char* password = "accesspoint";
+#endif
 
 // Webserver
 WebServer server(80);
@@ -68,29 +72,44 @@ void setup(void){
   // Turn the LED on once serial begun
   digitalWrite(LED, HIGH);          
 
-  // Access point
-  //WiFi.mode(WIFI_AP); //Access Point mode
-  //WiFi.softAP(ssid, password); */
-  
+#if ACCESSPOINT
+  // Access point 
+  WiFi.mode(WIFI_AP); //Access Point mode
+  WiFi.softAP(ssid, password);
+  Serial.print("Access Point started: ");
+  Serial.print(ssid);
+  Serial.print(":");
+  Serial.println(password);
+  Serial.print("AP Address: ");
+  Serial.println(WiFi.softAPIP());
+#else
   // Connect to existing wifi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.print("Connecting to: ");
   Serial.println(ssid);
-
   //Wait for WiFi to connect
+  int aline = 0;
   while(WiFi.waitForConnectResult() != WL_CONNECTED)
   {      
-    Serial.print(".");
-    delay(250);
+    delay(1000);
+    aline++;
+    if (aline > 80) {
+      aline = 0;
+      Serial.println(".");
+    }
+    else
+    {
+      Serial.print(".");
+    }
   } 
-    
   //If connection successful show IP address in serial monitor
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());  //IP address assigned to your ESP
+#endif
 
   // HTTP request responders
   server.on("/", handleRoot);           // Main page

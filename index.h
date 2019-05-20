@@ -4,8 +4,8 @@ const char MAIN_page[] PROGMEM = R"=====(
 
 <style>
 .plot{
-  width: 400px;
-  height: 256px;
+  width: 320px;
+  height: 240px;
   background-color: #222;
   border: none;
   color: #FFF;
