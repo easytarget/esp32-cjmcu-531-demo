@@ -17,7 +17,6 @@
 
 // Distance reading and angle
 int range;     // Latest reading
-int angle = 0; // Initial assumed scan angle
 int roi;       // region of Intrest setting
 
 // Distance history for rolling average
@@ -50,6 +49,20 @@ SFEVL53L1X distanceSensor;
 //#define SHUTDOWN_PIN 2
 //#define INTERRUPT_PIN 3
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
+
+// Lidar Servo - (uncomment and fill in settings)
+//#define LIDAR
+#ifdef LIDAR
+  float angle = 0; // Assume servo is at '0' to start.
+  #define SERVO_ENABLE_PIN = unset
+  #define SERVO_STEP_PIN = unset
+  #define SERVO_DIRECTION_PIN = unset
+  #define SERVO_INVERT false
+  #define LEFT_ENDSTOP_PIN = unset
+  #define RIGHT_ENDSTOP_PIN = unset
+  #define DEGREES_PER_STEP = 1.8
+  #define MICROSTEPS_PER_STEP = 8
+#endif
 
 // Other
 #define LED 2    // On-Board LED pin
@@ -113,9 +126,12 @@ void setup(void){
 
   // HTTP request responders
   server.on("/", handleRoot);           // Main page
+
   // Info requests
-  server.on("/range", handleRange); // Update of distance
-  server.on("/info", handleInfo);       // info
+  server.on("/range", handleRange);     // Update of distance and reading status
+  server.on("/info", handleInfo);       // more detailed sensor info
+  //server.on("/scan", handleScan);     // read a scan of data
+
   // Settings
   server.on("/near", handleNearMode);   // mode seting
   server.on("/mid", handleMidMode);     // mode seting
@@ -126,14 +142,16 @@ void setup(void){
   // Commands
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
-  server.on("/left", handleLeft);       // Step left
-  server.on("/right", handleRight);     // Step right
-
+  #ifdef LIDAR
+    server.on("/left", handleLeft);       // Step left
+    server.on("/right", handleRight);     // Step right
+  #endif
+  
   // Start web server
   server.begin();
   Serial.println("HTTP server started");
 
-  //    Start sensor
+  // Start sensor
   Wire.begin();
   if (distanceSensor.begin() == true)
     Serial.println("Sensor online!");
@@ -149,7 +167,7 @@ void setup(void){
   digitalWrite(LED, LOW);   // turn the LED off now init is successful
 
   // sensor default mode
-  handleNearMode(); 
+  handleMidMode(); 
 }
 
 
@@ -157,13 +175,14 @@ void setup(void){
 // Handlers for responses to http requests
 //=========================================
 
+// Mainpage 
+
 void handleRoot() {
-  digitalWrite(LED, HIGH);   // blink the LED
-  String s = MAIN_page; //Read HTML contents
+  digitalWrite(LED, HIGH);          // blink the LED
+  String s = MAIN_page;             //Read HTML from the MAIN_page progmem
   server.send(200, "text/html", s); //Send web page
   Serial.print("Sent the main page to: ");
-  String addy = server.client().remoteIP().toString();
-  Serial.println(addy);
+  Serial.println(server.client().remoteIP().toString());
   delay(BLINK);
   digitalWrite(LED, LOW);
   delay(BLINK);
@@ -172,24 +191,6 @@ void handleRoot() {
   digitalWrite(LED, LOW);
 }
  
-void handleRange() {
-  String out;
-  StaticJsonDocument<50> range;
-  if (enabled == true)
-  {
-    range["Distance"] = distanceSensor.getDistance();
-    range["RangeStatus"] = distanceSensor.getRangeStatus();
-    range["Angle"] = angle;
-  }
-  else
-  {
-    range["Distance"] = -1;
-    range["RangeStatus"] = -1;
-    range["Angle"] = angle;
-  }
-  serializeJsonPretty(range, out);
-  server.send(200, "text/plane", out);
-}
 
 void handleOn()
 {
@@ -215,7 +216,6 @@ void handleOff()
   Serial.println("Turning Off");
   delay(BLINK);
   digitalWrite(LED, LOW);
-
 }
 
 void handleNearMode()
@@ -233,6 +233,7 @@ void handleNearMode()
   delay(BLINK);
   digitalWrite(LED, LOW);
 }
+
 void handleMidMode()
 {
   mode = "Mid"; 
@@ -248,6 +249,7 @@ void handleMidMode()
   delay(BLINK);
   digitalWrite(LED, LOW);
 }
+
 void handleFarMode()
 {
   mode = "Far"; 
@@ -263,19 +265,21 @@ void handleFarMode()
   digitalWrite(LED, LOW);
 }
 
-void handleLeft()
-{
-  int newangle = angle - 10; 
-  if (newangle < -180) angle = -180; else angle = newangle;
-  server.send(200, "text/plane", "left");
-}
-
-void handleRight()
-{
-  int newangle = angle + 10; 
-  if (newangle > 180) angle = 180; else angle = newangle;
-  server.send(200, "text/plane", "right");
-}
+#ifdef LIDAR
+  void handleLeft()
+  {
+    int newangle = angle - 10; 
+    if (newangle < -180) angle = -180; else angle = newangle;
+    server.send(200, "text/plane", "left");
+  }
+  
+  void handleRight()
+  {
+    int newangle = angle + 10; 
+    if (newangle > 180) angle = 180; else angle = newangle;
+    server.send(200, "text/plane", "right");
+  }
+#endif
 
 void handleRoiPlus()
 {
@@ -293,23 +297,59 @@ void handleRoiMinus()
   distanceSensor.setROI(roi, roi);
 }
 
+void handleRange() {
+  String out;
+  StaticJsonDocument<50> range;
+  if (enabled == true)
+  {
+    range["Distance"] = distanceSensor.getDistance();
+    range["RangeStatus"] = distanceSensor.getRangeStatus();
+    #ifdef LIDAR
+      range["Angle"] = angle;
+    #endif
+  }
+  else
+  {
+    range["Distance"] = -1;
+    range["RangeStatus"] = -1;
+    #ifdef LIDAR
+      range["Angle"] = angle;
+    #endif
+  }
+  serializeJsonPretty(range, out);
+  server.send(200, "text/plane", out);
+}
 
 void handleInfo()
 {
   String out;
-  StaticJsonDocument<200> infostamp;
+  StaticJsonDocument<300> infostamp;
   infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
   infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
   infostamp["DistanceMode"] = distanceSensor.getDistanceMode();
   infostamp["SignalPerSpad"] = distanceSensor.getSignalPerSpad();
   infostamp["SpadNb"] = distanceSensor.getSpadNb();
+  infostamp["AmbientRate"] = distanceSensor.getAmbientRate();
+  infostamp["Offset"] = distanceSensor.getOffset();
+  infostamp["SignalThreshold"] = distanceSensor.getSignalThreshold();
+  infostamp["SigmaThreshold"] = distanceSensor.getSigmaThreshold();
+  infostamp["XTalk"] = distanceSensor.getXTalk();
+  infostamp["ThresholdWindow"] = distanceSensor.getDistanceThresholdWindow();
+  infostamp["DistanceThresholdLow"] = distanceSensor.getDistanceThresholdLow();
+  infostamp["DistanceThresholdHigh"] = distanceSensor.getDistanceThresholdHigh();
   infostamp["ROIX"] = distanceSensor.getROIX();
   infostamp["ROIY"] = distanceSensor.getROIY();
-  infostamp["Angle"] = angle;
+  #ifdef LIDAR 
+    infostamp["HasServo"] = true;
+  #else
+    infostamp["HasServo"] = false;
+  #endif
+  char id [8]; sprintf(id, "0x%x", distanceSensor.getSensorID());
+  infostamp["ID"] = id;
+
   serializeJsonPretty(infostamp, out);
   server.send(200, "text/plane", out);
 }
-
 
 //====================================
 // Main Loop (invokes client handler)
