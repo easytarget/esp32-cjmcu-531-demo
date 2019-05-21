@@ -3,6 +3,11 @@ const char MAIN_page[] PROGMEM = R"=====(
 <html>
 
 <style>
+hr{
+  border-color: #056016;
+  background-color: #056016;
+  width: 100%;
+}
 .plot{
   width: 320px;
   height: 240px;
@@ -59,11 +64,9 @@ const char MAIN_page[] PROGMEM = R"=====(
 
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
-    <!--<hr style="background: #056016; border: 1px;">-->
     <hr>
-    <h1>Range (mm): <span id="RANGEValue" style="color: #056016">Connecting</span></h1>
-    <h2>Status: <span id="INFOValue" style="color: #056016">Unset</span></h2>
-    <div class="plot">Plot Goes Here</div>
+    <h1>Range (mm): <pre><span id="RANGEValue" style="color: #056016">Connecting</span></pre></h1>
+    <div class="plot">Evil Plot</div>
     <hr>
      <div style="text-align: center;">
       Sensitivity&nbsp;&nbsp;::&nbsp;&nbsp;
@@ -73,27 +76,29 @@ const char MAIN_page[] PROGMEM = R"=====(
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/far')">Far</button>
     </div>
-    <br>
+
     <div style="text-align: center;">
       ROI&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/roiminus')">Smaller</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/roiplus')">Bigger</button>
     </div>
-    <br>
+
     <div style="text-align: center;">
       Rotation&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/left')">left</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/right')">Right</button>
     </div>
-    <br>
+
     <div style="text-align: center;">
       Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/on')">On</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/off')">Off</button>
     </div>
+    <hr>
+    <h2>Status: <pre><span id="INFOValue" style="color: #056016">Unset</span></pre></h2>
     <hr>
     <p style="text-align: right;">Brought to you by: <a href="https://easytarget.org/">easytarget.org</a>
   </div>
@@ -125,7 +130,7 @@ function getData() {
       this.responseText;
     }
   };
-  xhttp.open("GET", "readRANGE", true);
+  xhttp.open("GET", "/range", true);
   xhttp.send();
 }
 

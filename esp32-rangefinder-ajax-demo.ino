@@ -114,21 +114,20 @@ void setup(void){
   // HTTP request responders
   server.on("/", handleRoot);           // Main page
   // Info requests
-  server.on("/readRANGE", handleRANGE); // Update of distance
+  server.on("/range", handleRange); // Update of distance
   server.on("/info", handleInfo);       // info
   // Settings
   server.on("/near", handleNearMode);   // mode seting
   server.on("/mid", handleMidMode);     // mode seting
   server.on("/far", handleFarMode);     // mode seting
+  server.on("/roiplus", handleRoiPlus);   // widen ROI
+  server.on("/roiminus", handleRoiMinus); // narrow ROI
+
   // Commands
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
-  server.on("/left", handleLeft);       // Sensor Enable
-  server.on("/right", handleRight);     // Sensor Disable
-
-  server.on("/roiplus", handleRoiPlus);   // widen ROI
-  server.on("/roiminus", handleRoiMinus); // narrow ROI
-  
+  server.on("/left", handleLeft);       // Step left
+  server.on("/right", handleRight);     // Step right
 
   // Start web server
   server.begin();
@@ -173,36 +172,23 @@ void handleRoot() {
   digitalWrite(LED, LOW);
 }
  
-void handleRANGE() {
-
-  // TODO: JONify and send angle
-  
+void handleRange() {
+  String out;
+  StaticJsonDocument<50> range;
   if (enabled == true)
   {
-    long startTime = millis();
-    distanceSensor.startRanging(); //Write configuration block of 135 bytes to setup a measurement
-    int range = distanceSensor.getDistance(); //Get the result of the measurement from the sensor
-    distanceSensor.stopRanging();
-    long endTime = millis();
-    String rangeValue = String(range);
-  
-    history[historySpot] = range;
-    if (++historySpot == HISTORY_SIZE) historySpot = 0;
-  
-    long average = 0;
-    for (int x = 0 ; x < HISTORY_SIZE ; x++)
-      average += history[x];
-      
-    average /= HISTORY_SIZE;
-    String rangeAverage = String(average);
-  
-    server.send(200, "text/plane", rangeValue);
-    //server.send(200, "text/plane", rangeAverage);
+    range["Distance"] = distanceSensor.getDistance();
+    range["RangeStatus"] = distanceSensor.getRangeStatus();
+    range["Angle"] = angle;
   }
   else
   {
-    server.send(200, "text/plane", "disabled");
+    range["Distance"] = -1;
+    range["RangeStatus"] = -1;
+    range["Angle"] = angle;
   }
+  serializeJsonPretty(range, out);
+  server.send(200, "text/plane", out);
 }
 
 void handleOn()
@@ -243,7 +229,7 @@ void handleNearMode()
 
   // blink LED and send to serial
   digitalWrite(LED, HIGH);
-  Serial.println("Mode: Low");
+  Serial.println("Mode: Near");
   delay(BLINK);
   digitalWrite(LED, LOW);
 }
@@ -310,28 +296,18 @@ void handleRoiMinus()
 
 void handleInfo()
 {
-  // Todo: JSONify this
-
-  String infoblock = "";
-  infoblock += String (distanceSensor.getRangeStatus());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getTimingBudgetInMs());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getIntermeasurementPeriod());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getDistanceMode());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getSignalPerSpad());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getSpadNb());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getROIX());
-  infoblock += " : ";
-  infoblock += String (distanceSensor.getROIY());
-  infoblock += " : angle ";
-  infoblock += String (angle);
-
-  server.send(200, "text/plane", infoblock);
+  String out;
+  StaticJsonDocument<200> infostamp;
+  infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
+  infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
+  infostamp["DistanceMode"] = distanceSensor.getDistanceMode();
+  infostamp["SignalPerSpad"] = distanceSensor.getSignalPerSpad();
+  infostamp["SpadNb"] = distanceSensor.getSpadNb();
+  infostamp["ROIX"] = distanceSensor.getROIX();
+  infostamp["ROIY"] = distanceSensor.getROIY();
+  infostamp["Angle"] = angle;
+  serializeJsonPretty(infostamp, out);
+  server.send(200, "text/plane", out);
 }
 
 
