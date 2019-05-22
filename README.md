@@ -3,7 +3,12 @@
 * Sparkfun VL53L0X library: (search for it in the arduino IDE or) get from https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 #### Shots
 ![The Prototype](/rangefinder-proto1.jpg)
-![The results](/rangefinder-shot1.png)
+![The results](/graph-panel.png) ![The results](/status-panel.png)
+#### Plans
+* Use the official Library
+* Add a servo (== lidar)
+* Use one Ajax request instead of the current two.
+* Rate control
 #### Logging
 ```
 rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
