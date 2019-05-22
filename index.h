@@ -14,19 +14,25 @@ const char MAIN_page[] PROGMEM = R"=====(
   }
   .plot{
     width: 320px;
-    height: 20px;
-    background-color: #666;
+    height: 240px;
+    background-color: #777;
     border: none;
-    color: #FFF;
+    color: #CCC;
     padding: none ;
     text-align: center;
     text-decoration: none;
-    display: block;
+    display: none;
     margin-left: auto;
     margin-right: auto;
-    margin-top: 3px;
-    margin-bottom: 6px;
-    cursor: zoom-in;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    cursor: progress;
+  }
+  .plotbar {
+    height: 22px;
+    background-color: #666;
+    display: block;
+    cursor: pointer;
   }
   .button{
     border-radius: 20%;
@@ -68,11 +74,11 @@ const char MAIN_page[] PROGMEM = R"=====(
   }
 </style>
 
-<!-- It's meta, baby -->
+<!-- Top -->
 <head>
   <title>ESP32/VL53L0X display and control demo</title>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=400, initial-scale=1" />
+  <meta name="viewport" content="width=380, initial-scale=1" />
   <meta http-equiv="Cache-control" content="no-cache">
 </head>
 
@@ -84,16 +90,29 @@ const char MAIN_page[] PROGMEM = R"=====(
     
     <hr>
     
-    <h2 style="text-align: center;">Range (mm):</h2>
+    <h2 style="text-align: center;">Range: <span style="font-size: 60%;">
+    (mm, <span id="MODEValue">unknown</span> mode)</span></h2>
     <h1 style="text-align: center;"><span id="RANGEValue" style="color: #056016">
     Connecting..</span></h1>
 
-    <div class="plot" id="plot" onclick="togglePlot()">Evil Plot</div>
+    <canvas class="plot" id="plot" onclick="togglePlot()" width=320 height=240>
+    This is a Canvas Element, if it is not displayed then we apologize, your browser 
+    is not compatible.</canvas>
+    <div class="plot plotbar" onclick="togglePlot()">Evil Plot</div>
     
     <hr>
     
-     <div style="text-align: center;">
-      Sensitivity&nbsp;&nbsp;::&nbsp;&nbsp;
+    <div style="text-align: center;">
+      Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/on')" 
+              title="Enable sensor">On</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/off')" 
+              title="Disable sensor">Off</button>
+    </div>
+
+    <div style="text-align: center;">
+      Mode&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/near')" 
               title="Near range (max 1.3m, fastest)">Near</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
@@ -122,27 +141,20 @@ const char MAIN_page[] PROGMEM = R"=====(
               title="Swing the sensor right">Right</button>
     </div>
 
-    <div style="text-align: center;">
-      Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/on')" 
-              title="Enable sensor">On</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/off')" 
-              title="Disable sensor">Off</button>
-    </div>
-
     <span onclick="toggleStatusPanel()">
       <h3 style="text-align: center; cursor: pointer; text-decoration: underline;">
       Show Status</h3>
       <pre><span id="INFOValue" style="color: #056016; display: none;">
       Connecting..</span></pre>
     </span>
-    <p style="text-align: right;">::<a href="https://easytarget.org/">easytarget.org</a>::
+    <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-rangefinder-ajax-demo" 
+    title="Project Home">GitHub</a>::</p>
   </div>
 
   <!-- The scripting -->
   
   <script>
+  
     // Create the recurring interval task to refresh the distance value
     setInterval(function() {
       getValues();
@@ -161,7 +173,10 @@ const char MAIN_page[] PROGMEM = R"=====(
         xmlHttp.send( null );
         return xmlHttp.responseText;
     }
-    
+
+    // Loop to get, process and display value readings
+    var plotline = 0;
+    var plotscale = 20;
     function getValues() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
@@ -214,11 +229,27 @@ const char MAIN_page[] PROGMEM = R"=====(
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
             }
           }
+          if (response.Angle) {
+            document.getElementById("RANGEValue").innerHTML += response.Angle;
+          }        
+        
+          if (response.RangeStatus == 0) {
+            ctx = document.getElementById("plot").getContext("2d");
+            var maxX = Math.floor(ctx.canvas.width);
+            var maxY = Math.floor(ctx.canvas.height);
+            plotvalue = Math.floor(response.Distance / plotscale);
+            plotpoint = maxY - plotvalue;
+            ctx = document.getElementById("plot").getContext("2d");
+            ctx.fillStyle = "#DDDDDD";
+            ctx.fillRect(plotline, plotpoint, 1, plotvalue);
+            plotline = plotline + 1;
+            if (plotline > maxX) {
+              plotline = 0;
+            }
+            ctx.clearRect(plotline, 0, 1, maxX);
+          }
         }
-        //if (response.Angle) {
-        //  document.getElementById("RANGEValue").innerHTML += response.Angle;
-        //}
-      };
+      }
       xhttp.open("GET", "/range", true);
       xhttp.send();
       xhttp.timeout = 300; // time in milliseconds
@@ -227,39 +258,32 @@ const char MAIN_page[] PROGMEM = R"=====(
       };
     }
     
+    // Read and process the extended info, handle mode changes
+    var mode = "NONE";
     function getInfo() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          var response = this.responseText;
-          document.getElementById("INFOValue").innerHTML = response;
-       }
-      };
+          var response = JSON.parse(this.responseText);
+          document.getElementById("INFOValue").innerHTML = this.responseText;
+          if (response.Mode != mode) {
+            mode = response.Mode;
+            setMode(response.Mode);
+          }
+        }
+      }
       xhttp.open("GET", "/info", true);
       xhttp.send();
       xhttp.timeout = 600; // time in milliseconds
     };
 
-    // Updates page to show the default-hidden lidar controls
-    function enableLidar() {
-      var x = document.getElementsByClassName("lidar");
-      var i;
-      for (i = 0; i < x.length; i++) {
-        x[i].style.display = block;
-      }
-    }
-
     var plot = false;
     function togglePlot() {
       if (plot) { //collapse
-        document.getElementById("plot").innerHTML = "Totally Evil Plot!";
-        document.getElementById("plot").style.height = "20px";
-        document.getElementById("plot").style.cursor = "zoom-in";
+        document.getElementById("plot").style.display = "none";
         plot = false;
       } else { // expand
-        document.getElementById("plot").innerHTML = "HELLO"; 
-        document.getElementById("plot").style.height = "240px";
-        document.getElementById("plot").style.cursor = "zoom-out";
+        document.getElementById("plot").style.display = "block";
         plot = true;
       }
     }
@@ -272,6 +296,42 @@ const char MAIN_page[] PROGMEM = R"=====(
         x.style.display = "none";
       }
     }
+
+    // Updates page to show the default-hidden lidar controls
+    function enableLidar() {
+      var x = document.getElementsByClassName("lidar");
+      var i;
+      for (i = 0; i < x.length; i++) {
+        x[i].style.display = block;
+      }
+    }
+
+    // Called when a mode change is detected; sets the graph etc.
+    function setMode(mode) {
+      ctx = document.getElementById("plot").getContext("2d");
+      var maxX = Math.floor(ctx.canvas.width);
+      var maxY = Math.floor(ctx.canvas.height);
+      ctx.clearRect(0, 0, maxX, maxY);
+      plotline = 0;
+      switch (mode) {
+        case "Near":
+          plotscale = 8;
+          document.getElementById("MODEValue").innerHTML = "Near (1.3m)";
+          break;
+        case "Mid":
+          plotscale = 16;
+          document.getElementById("MODEValue").innerHTML = "Mid (2.6m)";
+          break;
+        case "Far":
+          plotscale = 20;
+          document.getElementById("MODEValue").innerHTML = "Far (4m)";
+          break;
+        default:
+          plotscale = 100;
+          document.getElementById("MODEValue").innerHTML = "Unknown";
+      }
+    }
+
   </script>
 </body>
 </html>

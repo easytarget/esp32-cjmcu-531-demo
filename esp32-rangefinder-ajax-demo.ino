@@ -1,7 +1,7 @@
 /*
  * ESP32 AJAX rangefinder
  * Updates and Gets data from webpage without page refresh
- * https://circuits4you.com
+ * Based on examples from Sparkfun and https://circuits4you.com
  */
  
 // 3rd party libraries
@@ -11,6 +11,7 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <SparkFun_VL53L1X.h>
+#include <DNSServer.h>
 
 // Embedded web page contents
 #include "index.h"    
@@ -25,8 +26,8 @@ int history[HISTORY_SIZE];
 byte historySpot;
 
 // Settings
-bool enabled = false; // main enabled/disabled thing
-String mode = "Near"; // range mode
+bool enabled = true; // main enabled/disabled thing
+String mode = "Mid"; // range mode
 
 // Wifi
 #if __has_include("mywifi.h")
@@ -36,8 +37,8 @@ String mode = "Near"; // range mode
   // Leave as is to create an accesspoint, or set ACCESSPOINT 
   //  to false and supply your networks SSID and PASSWORD.
   #define ACCESSPOINT true
-  const char* ssid = "VL53L0X";
-  const char* password = "accesspoint";
+  const char* ssid = "VL53L0X-demo";
+  const char* password = ""; // no password == very insecure, but very easy to demo
 #endif
 
 // Webserver
@@ -166,8 +167,10 @@ void setup(void){
   // Setup complete, turn LED off
   digitalWrite(LED, LOW);   // turn the LED off now init is successful
 
-  // sensor default mode
-  handleMidMode(); 
+  // sensor default mode, and start it if enabled by default
+  handleMidMode();
+  if (enabled == true) distanceSensor.startRanging();
+
 }
 
 
@@ -225,7 +228,7 @@ void handleNearMode()
   distanceSensor.setTimingBudgetInMs(20);
   distanceSensor.setIntermeasurementPeriod(20);
 
-  server.send(200, "text/plane", "short mode");
+  server.send(200, "text/plane", "near mode");
 
   // blink LED and send to serial
   digitalWrite(LED, HIGH);
@@ -324,6 +327,7 @@ void handleInfo()
 {
   String out;
   StaticJsonDocument<300> infostamp;
+  infostamp["Mode"] = mode;
   infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
   infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
   infostamp["DistanceMode"] = distanceSensor.getDistanceMode();
