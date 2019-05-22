@@ -13,17 +13,20 @@ Connect to the 'VL53L0X-demo' wifi network, no password. then browse to 192.168.
 1. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, unused?)_
 #### Shots
 ![The Prototype](/rangefinder-proto1.jpg)
-![The results](/graph-panel.png) ![The results](/status-panel.png)
+![The results](/graph-panel.png)![The results](/status-panel.png)
 #### Plans
 * Use one Ajax request instead of the current two.
 * Landing page for AP mode (use dns/mdns, examples abound)
 * Auto accesspoint selection from list (there is a lib for this)
 * Fewer Handler routines, grock the URL supplied
 * Update rate control
+* Check the devices specs, I dont think Sparkfuns lib is complete for the sensor I have. ROI settings etc seem wrong.
+* _Use the official Library for the VL53L0X and it's family?_
 * More setting adjustments, on a seperate collapsable panel.
 * Add a servo (== lidar); add interrupt-driven motion control loop with homing (and accelleration control?)
 * SMP: handle sensor+servo on different core than the web server.
-* Use the official Library
+#### Bugs
+* I have noticed the CMJU-531 I2C comms seem to lock up occasionally and needs a full power cycle to resume. This has only happened when I'm rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
 #### Logging
 ```
 Booting Sketch...
