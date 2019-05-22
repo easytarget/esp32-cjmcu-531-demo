@@ -29,7 +29,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     cursor: progress;
   }
   .plotbar {
-    height: 22px;
+    height: 18px;
     background-color: #666;
     display: block;
     cursor: pointer;

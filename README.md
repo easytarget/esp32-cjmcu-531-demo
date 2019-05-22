@@ -5,10 +5,15 @@
 ![The Prototype](/rangefinder-proto1.jpg)
 ![The results](/graph-panel.png) ![The results](/status-panel.png)
 #### Plans
-* Use the official Library
-* Add a servo (== lidar)
 * Use one Ajax request instead of the current two.
-* Rate control
+* Landing page for AP mode (use dns/mdns, examples abound)
+* Auto accesspoint selection from list (there is a lib for this)
+* Fewer Handler routines, grock the URL supplied
+* Update rate control
+* More setting adjustments, on a seperate collapsable panel.
+* Add a servo (== lidar); add interrupt-driven motion control loop with homing (and accelleration control?)
+* SMP: handle sensor+servo on different core than the web server.
+* Use the official Library
 #### Logging
 ```
 rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
