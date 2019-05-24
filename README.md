@@ -1,7 +1,8 @@
 # CMJU-531 and ESP32 Demo using a VL53L1X library and Ajax to display on a self-hosted site.
 Designed (initially) for the VL53L1X (4 meter) sensor:
 https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html
-Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (no password needed), and Then browse to 192.168.4.1 for the UI.
+
+Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (no password needed), and then browsing to '192.168.4.1' for the UI.
 
 #### Requirements:
 * ESP32 DEV module connected to a suitable sensor; any ESP 32 module should be suitable, but you may need to adapt pinouts.
@@ -28,8 +29,11 @@ See: https://www.st.com/en/ecosystems/x-cube-53l1a1.html#overview
 1. **GND** on ESP32 goes to **GND** on CMJU-531
 1. **D21** (GPIO21, I2C SDA) on ESP32 goes to **SDA** on CMJU-531
 1. **D22** (GPIO22, I2C SCL) on ESP32 goes to **SCL** on CMJU-531
-1. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control, not used?)_
-1. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
+
+Not currently used:
+
+5. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control, not currently used)_
+5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
 
 #### Shots
 ![The Prototype](/docs/rangefinder-proto1.jpg)
@@ -39,6 +43,7 @@ See: https://www.st.com/en/ecosystems/x-cube-53l1a1.html#overview
 https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 * Add a servo (== lidar); add interrupt-driven motion control loop with homing, canned movements (and accelleration control?).
 * SMP: handle sensor+servo on different core than the web server.
+* stop using GET requests and move to a streaming protocol.
 
 #### Issues
 * I have noticed the CMJU-531 I2C comms seem to lock up occasionally and needs a full power cycle to resume. This has only happened when I'm rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
