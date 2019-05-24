@@ -164,7 +164,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     <pre><span id="statusPanel" style="color: #056016; display: none;">
       Connecting..</span></pre>
       
-    <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-rangefinder-ajax-demo" 
+    <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
     title="Project Home">GitHub</a>::</p>
 
   </div>
