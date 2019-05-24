@@ -130,6 +130,15 @@ const char MAIN_page[] PROGMEM = R"=====(
               title="Far Range (max 4m, slower but more accurate over whole range)">Far</button>
     </div>
 
+    <div style="text-align: center;" class="lidar">
+      Turret&nbsp;&nbsp;::&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/left')" 
+              title="Swing the sensor left">left</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/right')" 
+              title="Swing the sensor right">Right</button>
+    </div>
+
     <div >
       <h3 onclick="showControlPanel()" id="showControl" 
         class="expander">
@@ -145,14 +154,6 @@ const char MAIN_page[] PROGMEM = R"=====(
                   title="Make Region of Interest bigger">Bigger</button>
         </div>
   
-        <div style="text-align: center;" class="lidar">
-          Turret&nbsp;&nbsp;::&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/left')" 
-                  title="Swing the sensor left">left</button>
-          &nbsp;&nbsp;||&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/right')" 
-                  title="Swing the sensor right">Right</button>
-        </div>
         <h3 onclick="hideControlPanel()" class="expander">
           less control
         </h3>
