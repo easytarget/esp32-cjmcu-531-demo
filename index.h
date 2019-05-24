@@ -60,6 +60,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     margin-right: auto;
     box-shadow: 0px 2px 18px -4px rgba(0,0,0,0.75);
     border-radius: 12px;
+    outline-style:none;
   }
   .lidar{
     display: none;
