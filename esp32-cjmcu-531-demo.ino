@@ -51,7 +51,7 @@ SFEVL53L1X distanceSensor;
 //#define INTERRUPT_PIN 3
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
 
-// Lidar Servo - (uncomment and fill in settings)
+// Lidar Servo - Not implemented; (uncomment and fill in settings)
 //#define LIDAR
 #ifdef LIDAR
   float angle = 0; // Assume servo is at '0' to start.

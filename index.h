@@ -274,6 +274,7 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
         document.getElementById("signal").style.color = "#8e0b0b";
+        document.getElementById("RANGEValue").style.color = "#8e0b0b";
       };
     }
     
