@@ -27,7 +27,7 @@ byte historySpot;
 
 // Settings
 bool enabled = true; // main enabled/disabled thing
-String mode = "Mid"; // range mode
+String mode = "mid"; // range mode
 
 // Wifi
 #if __has_include("mywifi.h")
@@ -223,7 +223,7 @@ void handleOff()
 
 void handleNearMode()
 {
-  mode = "Near"; 
+  mode = "near"; 
   distanceSensor.setDistanceModeShort();
   distanceSensor.setTimingBudgetInMs(20);
   distanceSensor.setIntermeasurementPeriod(20);
@@ -239,7 +239,7 @@ void handleNearMode()
 
 void handleMidMode()
 {
-  mode = "Mid"; 
+  mode = "mid"; 
   distanceSensor.setDistanceModeLong();
   distanceSensor.setTimingBudgetInMs(33);
   distanceSensor.setIntermeasurementPeriod(33);
@@ -255,7 +255,7 @@ void handleMidMode()
 
 void handleFarMode()
 {
-  mode = "Far"; 
+  mode = "far"; 
   distanceSensor.setDistanceModeLong();
   distanceSensor.setTimingBudgetInMs(50);
   distanceSensor.setIntermeasurementPeriod(50);

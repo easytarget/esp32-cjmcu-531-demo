@@ -7,6 +7,7 @@ const char MAIN_page[] PROGMEM = R"=====(
   a{
     color: #555;
   }
+
   hr{
     border-color: #056016;
     background-color: #056016;
@@ -20,7 +21,6 @@ const char MAIN_page[] PROGMEM = R"=====(
     color: #CCC;
     padding: none ;
     text-align: center;
-    text-decoration: none;
     display: none;
     margin-left: auto;
     margin-right: auto;
@@ -41,10 +41,10 @@ const char MAIN_page[] PROGMEM = R"=====(
     color: #FFF;
     padding: 3px 6px ;
     text-align: left;
-    text-decoration: none;
     display: inline-block;
     margin: 3px 6px;
     cursor: pointer;
+    outline-style:none;
   }
   .card{
     max-width: 380px;
@@ -61,6 +61,12 @@ const char MAIN_page[] PROGMEM = R"=====(
     box-shadow: 0px 2px 18px -4px rgba(0,0,0,0.75);
     border-radius: 12px;
     outline-style:none;
+    text-decoration: none;
+  }
+  .expander{
+    text-align: center;
+    cursor: pointer;
+    color: #555;
   }
   .lidar{
     display: none;
@@ -91,8 +97,8 @@ const char MAIN_page[] PROGMEM = R"=====(
     
     <hr>
     
-    <h2 style="text-align: center;">Range: <span style="font-size: 60%;">
-    (mm, <span id="MODEValue">unknown</span> mode)</span></h2>
+    <h2 style="text-align: center;">Range <span style="font-size: 80%;">(mm)</span>:&nbsp;
+    <span style="font-size: 60%;"><span id="MODEValue">unknown</span> mode</span></h2>
     <h1 style="text-align: center;"><span id="RANGEValue" style="color: #056016">
     Connecting..</span></h1>
 
@@ -124,32 +130,43 @@ const char MAIN_page[] PROGMEM = R"=====(
               title="Far Range (max 4m, slower but more accurate over whole range)">Far</button>
     </div>
 
-    <div style="text-align: center;">
-      ROI&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/roiminus')" 
-              title="Make Region of Interest smaller">Smaller</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/roiplus')" 
-              title="Make Region of Interest bigger">Bigger</button>
+    <div >
+      <h3 onclick="showControlPanel()" id="showControl" 
+        class="expander">
+      more control</h3>
+      <span id="controlPanel" style="color: #056016; display: none;">
+
+        <div style="text-align: center;">
+          ROI&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/roiminus')" 
+                  title="Make Region of Interest smaller">Smaller</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/roiplus')" 
+                  title="Make Region of Interest bigger">Bigger</button>
+        </div>
+  
+        <div style="text-align: center;" class="lidar">
+          Turret&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/left')" 
+                  title="Swing the sensor left">left</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/right')" 
+                  title="Swing the sensor right">Right</button>
+        </div>
+        <h3 onclick="hideControlPanel()" class="expander">
+          less control
+        </h3>
+      </span>
     </div>
 
-    <div style="text-align: center;" class="lidar">
-      Turret&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/left')" 
-              title="Swing the sensor left">left</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/right')" 
-              title="Swing the sensor right">Right</button>
-    </div>
-
-    <span onclick="toggleStatusPanel()">
-      <h3 style="text-align: center; cursor: pointer; text-decoration: underline;">
-      Show Status</h3>
-      <pre><span id="INFOValue" style="color: #056016; display: none;">
+    <h3 class="expander" onclick="toggleStatusPanel()">
+      status</h3>
+    <pre><span id="statusPanel" style="color: #056016; display: none;">
       Connecting..</span></pre>
-    </span>
+      
     <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-rangefinder-ajax-demo" 
     title="Project Home">GitHub</a>::</p>
+
   </div>
 
   <!-- The scripting -->
@@ -266,7 +283,7 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
-          document.getElementById("INFOValue").innerHTML = this.responseText;
+          document.getElementById("statusPanel").innerHTML = this.responseText;
           if (response.Mode != mode) {
             mode = response.Mode;
             setMode(response.Mode);
@@ -289,8 +306,27 @@ const char MAIN_page[] PROGMEM = R"=====(
       }
     }
     
+    function showControlPanel() {
+      var x = document.getElementById("controlPanel");
+      if (x.style.display === "none") {
+        x.style.display = "block";
+      } else {
+        x.style.display = "none";
+      }
+    }
+
+     function showControlPanel() {
+     document.getElementById("controlPanel").style.display = "block";
+     document.getElementById("showControl").style.display = "none";
+    }
+
+    function hideControlPanel() {
+     document.getElementById("controlPanel").style.display = "none";
+     document.getElementById("showControl").style.display = "block";
+    }
+   
     function toggleStatusPanel() {
-      var x = document.getElementById("INFOValue");
+      var x = document.getElementById("statusPanel");
       if (x.style.display === "none") {
         x.style.display = "block";
       } else {
@@ -315,17 +351,17 @@ const char MAIN_page[] PROGMEM = R"=====(
       ctx.clearRect(0, 0, maxX, maxY);
       plotline = 0;
       switch (mode) {
-        case "Near":
+        case "near":
           plotscale = 8;
-          document.getElementById("MODEValue").innerHTML = "Near (1.3m)";
+          document.getElementById("MODEValue").innerHTML = "near (1.3m)";
           break;
-        case "Mid":
+        case "mid":
           plotscale = 16;
-          document.getElementById("MODEValue").innerHTML = "Mid (2.6m)";
+          document.getElementById("MODEValue").innerHTML = "mid (2.6m)";
           break;
-        case "Far":
+        case "far":
           plotscale = 20;
-          document.getElementById("MODEValue").innerHTML = "Far (4m)";
+          document.getElementById("MODEValue").innerHTML = "far (4m)";
           break;
         default:
           plotscale = 100;
