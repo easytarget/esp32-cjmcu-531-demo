@@ -11,17 +11,17 @@ Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (n
 The following libraries are not installed as standard in the Arduino IDE but are searchable and installable from within the library manager.
 * Sparkfun VL53L1X library: https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 * ArduinoJson library (v1.6+): https://arduinojson.org/
-* If you get an 'error: WebServer.h: No such file or directory' when compiling; make sure you have set your board type to 'ESP32Dev module'.
+* If you get an 'error: WebServer.h: No such file or directory' when compiling; make sure you have set your board type to 'ESP32Dev module' ;-)
 
-# Sensor Libs
-
-Currently I use the Sparkfun library; but there is also a lib from Pololu:
+# Sensor Libraries
+Currently I use the Sparkfun library; but there is also one from Pololu:
 
 https://github.com/pololu/vl53l1x-arduino :: https://www.pololu.com/product/3415/resources
 
-I intend to investigate this later; it looks more complete than the SparkFun one..
+Both of these are 'light' libs designed for ATMega arduinos (eg limited RAM, etc). The Official ST lib is larger, but more complete and (arguably) better supported. It is also somewhat crankily documented, and requires a sign-up at stmicro .com to access.
 
-There is also an 'official' ST lib at: https://www.st.com/en/ecosystems/x-cube-53l1a1.html#overview, but it requires registration and is not, as far as I can see, open source.
+The ST lib itself is redistributable, although the detailed documentation is not.. I still plan to move to this; and will provide it with the codebase here.
+See: https://www.st.com/en/ecosystems/x-cube-53l1a1.html#overview
 
 #### Pins:
 1. **3v3** on ESP32 goes to **VCC** on CMJU-531
@@ -32,8 +32,8 @@ There is also an 'official' ST lib at: https://www.st.com/en/ecosystems/x-cube-5
 1. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
 
 #### Shots
-![The Prototype](/rangefinder-proto1.jpg)
-![The results](/graph-panel.png)![The results](/status-panel.png)
+![The Prototype](/docs/rangefinder-proto1.jpg)
+![The results](/docs/graph-panel.png)![The results](/docs/status-panel.png)
 
 #### Plans
 https://github.com/easytarget/esp32-cjmcu-531-demo/issues
