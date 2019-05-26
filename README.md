@@ -3,6 +3,7 @@ Designed (initially) for the VL53L1X (4 meter) sensor:
 https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html
 
 Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (no password needed), and then browsing to '192.168.4.1' for the UI.
+![The results](/docs/graph-panel.png)
 
 #### Requirements:
 * ESP32 DEV module connected to a suitable sensor; any ESP 32 module should be suitable, but you may need to adapt pinouts.
@@ -35,9 +36,9 @@ Not currently used:
 5. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control, not currently used)_
 5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
 
-#### Shots
+#### Demo setup
 ![The Prototype](/docs/rangefinder-proto1.jpg)
-![The results](/docs/graph-panel.png)![The results](/docs/status-panel.png)
+![The results](/docs/status-panel.png)
 
 #### Plans
 https://github.com/easytarget/esp32-cjmcu-531-demo/issues

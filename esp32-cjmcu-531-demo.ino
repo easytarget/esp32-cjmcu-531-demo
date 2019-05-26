@@ -11,19 +11,21 @@
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include <SparkFun_VL53L1X.h>
-#include <DNSServer.h>
 
 // Embedded web page contents
 #include "index.h"    
 
-// Distance reading and angle
-int range;     // Latest reading
-int roi;       // region of Intrest setting
+// Globals for sensor settings
+int range;         // Latest reading
+int roi;           // region of Intrest setting
+int budget;        // reading time budget in ms. (bigger==more accuracy)
+int interval;      // how often to start readings in ms
+int intervalextra = 4; // 
 
-// Distance history for rolling average
-#define HISTORY_SIZE 10
-int history[HISTORY_SIZE];
-byte historySpot;
+// Distance history for rolling average (UNUSED AT PRESENT)
+//#define HISTORY_SIZE 10
+//int history[HISTORY_SIZE];
+//byte historySpot;
 
 // Settings
 bool enabled = true; // main enabled/disabled thing
@@ -31,12 +33,14 @@ String mode = "mid"; // range mode
 
 // Wifi
 #if __has_include("mywifi.h")
-  // I keep my settings in a seperate header file that is not checked into github
+  // I keep my settings in a seperate header file that is not checked into git
   #include "mywifi.h"
 #else
   // Leave as is to create an accesspoint, or set ACCESSPOINT 
   //  to false and supply your networks SSID and PASSWORD.
-  #define ACCESSPOINT true
+  #define ACCESSPOINT
+  #define ACCESSPOINTIP 192,168,4,1
+  #define ACCESSPOINTMASK 255,255,255,1
   const char* ssid = "VL53L0X-demo";
   const char* password = ""; // no password == very insecure, but very easy to demo
 #endif
@@ -88,7 +92,10 @@ void setup(void){
 
 #if ACCESSPOINT
   // Access point 
+  IPAddress ourIP(ACCESSPOINTIP);
+  IPAddress ourMask(ACCESSPOINTMASK);
   WiFi.mode(WIFI_AP); //Access Point mode
+  WiFi.softAPConfig(ourIP, ourIP, ourMask);
   WiFi.softAP(ssid, password);
   Serial.print("Access Point started: ");
   Serial.print(ssid);
@@ -159,10 +166,11 @@ void setup(void){
 
   // read sensor initial values
   roi = distanceSensor.getROIX();
+  budget = distanceSensor.getTimingBudgetInMs();
   
   // Clean history..
-  for (int x = 0 ; x < HISTORY_SIZE ; x++)
-    history[x] = 0;
+  //for (int x = 0 ; x < HISTORY_SIZE ; x++)
+  //  history[x] = 0;
 
   // Setup complete, turn LED off
   digitalWrite(LED, LOW);   // turn the LED off now init is successful
@@ -224,9 +232,11 @@ void handleOff()
 void handleNearMode()
 {
   mode = "near"; 
+  budget = 20;
+  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeShort();
-  distanceSensor.setTimingBudgetInMs(20);
-  distanceSensor.setIntermeasurementPeriod(20);
+  distanceSensor.setTimingBudgetInMs(budget);
+  distanceSensor.setIntermeasurementPeriod(interval);
 
   server.send(200, "text/plane", "near mode");
 
@@ -240,10 +250,12 @@ void handleNearMode()
 void handleMidMode()
 {
   mode = "mid"; 
+  budget = 33;
+  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeLong();
-  distanceSensor.setTimingBudgetInMs(33);
-  distanceSensor.setIntermeasurementPeriod(33);
- 
+  distanceSensor.setTimingBudgetInMs(budget);
+  distanceSensor.setIntermeasurementPeriod(interval);
+
   server.send(200, "text/plane", "mid mode");
 
   // blink LED and send to serial
@@ -256,9 +268,12 @@ void handleMidMode()
 void handleFarMode()
 {
   mode = "far"; 
+  budget = 50;
+  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeLong();
-  distanceSensor.setTimingBudgetInMs(50);
-  distanceSensor.setIntermeasurementPeriod(50);
+  distanceSensor.setTimingBudgetInMs(budget);
+  distanceSensor.setIntermeasurementPeriod(interval);
+
   server.send(200, "text/plane", "far mode");
 
   // blink LED and send to serial

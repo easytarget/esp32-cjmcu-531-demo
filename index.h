@@ -6,6 +6,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 <style>
   a{
     color: #555;
+    text-decoration: none;
   }
 
   hr{
@@ -27,12 +28,6 @@ const char MAIN_page[] PROGMEM = R"=====(
     margin-top: 0px;
     margin-bottom: 0px;
     cursor: progress;
-  }
-  .plotbar {
-    height: 18px;
-    background-color: #666;
-    display: block;
-    cursor: pointer;
   }
   .button{
     border-radius: 20%;
@@ -102,10 +97,10 @@ const char MAIN_page[] PROGMEM = R"=====(
     <h1 style="text-align: center;"><span id="RANGEValue" style="color: #056016">
     Connecting..</span></h1>
 
-    <canvas class="plot" id="plot" onclick="togglePlot()" width=320 height=240>
+    <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
-    <div class="plot plotbar" onclick="togglePlot()">Evil Plot</div>
+    <h4 class="expander" id="plotControl" onclick="showPlot()">show plot</h4>
     
     <hr>
     
@@ -143,20 +138,19 @@ const char MAIN_page[] PROGMEM = R"=====(
       <h3 onclick="showControlPanel()" id="showControl" 
         class="expander">
       more control</h3>
-      <span id="controlPanel" style="color: #056016; display: none;">
 
-        <div style="text-align: center;">
-          ROI&nbsp;&nbsp;::&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/roiminus')" 
-                  title="Make Region of Interest smaller">Smaller</button>
-          &nbsp;&nbsp;||&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/roiplus')" 
-                  title="Make Region of Interest bigger">Bigger</button>
-        </div>
-  
+      <span id="controlPanel" style="color: #056016; display: none;">
         <h3 onclick="hideControlPanel()" class="expander">
           less control
         </h3>
+        <div style="text-align: center;">
+          ROI&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/roiminus')" 
+             title="Make Region of Interest smaller">Smaller</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/roiplus')" 
+             title="Make Region of Interest bigger">Bigger</button>
+        </div>
       </span>
     </div>
 
@@ -297,34 +291,24 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.timeout = 600; // time in milliseconds
     };
 
-    var plot = false;
-    function togglePlot() {
-      if (plot) { //collapse
-        document.getElementById("plot").style.display = "none";
-        plot = false;
-      } else { // expand
-        document.getElementById("plot").style.display = "block";
-        plot = true;
-      }
+    function showPlot() {
+      document.getElementById("plot").style.display = "block";
+      document.getElementById("plotControl").style.display = "none";
     }
     
-    function showControlPanel() {
-      var x = document.getElementById("controlPanel");
-      if (x.style.display === "none") {
-        x.style.display = "block";
-      } else {
-        x.style.display = "none";
-      }
+    function hidePlot() {
+      document.getElementById("plot").style.display = "none";
+      document.getElementById("plotControl").style.display = "block";
     }
-
-     function showControlPanel() {
-     document.getElementById("controlPanel").style.display = "block";
-     document.getElementById("showControl").style.display = "none";
+  
+    function showControlPanel() {
+      document.getElementById("controlPanel").style.display = "block";
+      document.getElementById("showControl").style.display = "none";
     }
 
     function hideControlPanel() {
-     document.getElementById("controlPanel").style.display = "none";
-     document.getElementById("showControl").style.display = "block";
+      document.getElementById("controlPanel").style.display = "none";
+      document.getElementById("showControl").style.display = "block";
     }
    
     function toggleStatusPanel() {
