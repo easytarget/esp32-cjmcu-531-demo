@@ -8,11 +8,13 @@ const char MAIN_page[] PROGMEM = R"=====(
     color: #555;
     text-decoration: none;
   }
-
   hr{
     border-color: #056016;
     background-color: #056016;
     width: 100%;
+  }
+  .modevalue{
+    
   }
   .plot{
     width: 320px;
@@ -88,22 +90,19 @@ const char MAIN_page[] PROGMEM = R"=====(
 <body>
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L0X Demo
-    <span id="signal" class="signal">Timeout</span></h3>
-    
-    <hr>
-    
-    <h2 style="text-align: center;">Range <span style="font-size: 80%;">(mm)</span>:&nbsp;
-    <span style="font-size: 60%;"><span id="MODEValue">unknown</span> mode</span></h2>
-    <h1 style="text-align: center;"><span id="RANGEValue" style="color: #056016">
-    Connecting..</span></h1>
-
+    <hr> 
+    <div id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
+    Connecting..</span></div>
+    <div style="text-align: left; font-size: 160%;font-weight: bold;">Range 
+    <span style="font-size: 80%;"> (mm) </span>:&nbsp;</div>
+    <div style="text-align: left; font-weight: bold;">
+    <span id="MODEValue">unknown</span>&nbsp;mode</div>
+    <div id="signal" class="signal">Timeout</span></div>
     <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
     <h4 class="expander" id="plotControl" onclick="showPlot()">show plot</h4>
-    
     <hr>
-    
     <div style="text-align: center;">
       Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/on')" 
@@ -112,7 +111,6 @@ const char MAIN_page[] PROGMEM = R"=====(
       <button class="button" onclick="httpGet('/off')" 
               title="Disable sensor">Off</button>
     </div>
-
     <div style="text-align: center;">
       Mode&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/near')" 
@@ -124,7 +122,6 @@ const char MAIN_page[] PROGMEM = R"=====(
       <button class="button" onclick="httpGet('/far')" 
               title="Far Range (max 4m, slower but more accurate over whole range)">Far</button>
     </div>
-
     <div style="text-align: center;" class="lidar">
       Turret&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/left')" 
@@ -133,16 +130,30 @@ const char MAIN_page[] PROGMEM = R"=====(
       <button class="button" onclick="httpGet('/right')" 
               title="Swing the sensor right">Right</button>
     </div>
-
-    <div >
+    <div>
       <h3 onclick="showControlPanel()" id="showControl" 
         class="expander">
       more control</h3>
-
       <span id="controlPanel" style="color: #056016; display: none;">
         <h3 onclick="hideControlPanel()" class="expander">
           less control
         </h3>
+        <div style="text-align: center;">
+          TimingBudget&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/budgetminus')" 
+             title="Make Timing Budget smaller">Smaller</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/budgetplus')" 
+             title="Make Timing Budget bigger">Bigger</button>
+        </div>
+        <div style="text-align: center;">
+          Interval&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/intervalminus')" 
+             title="Make InterMeasurement period smaller">Smaller</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/intervalplus')" 
+             title="Make InterMeasurement period bigger">Bigger</button>
+        </div>
         <div style="text-align: center;">
           ROI&nbsp;&nbsp;::&nbsp;&nbsp;
           <button class="button" onclick="httpGet('/roiminus')" 
@@ -153,12 +164,10 @@ const char MAIN_page[] PROGMEM = R"=====(
         </div>
       </span>
     </div>
-
     <h3 class="expander" onclick="toggleStatusPanel()">
       status</h3>
     <pre><span id="statusPanel" style="color: #056016; display: none;">
-      Connecting..</span></pre>
-      
+      Connecting..</span></pre> 
     <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
     title="Project Home">GitHub</a>::</p>
 

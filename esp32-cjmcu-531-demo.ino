@@ -20,7 +20,6 @@ int range;         // Latest reading
 int roi;           // region of Intrest setting
 int budget;        // reading time budget in ms. (bigger==more accuracy)
 int interval;      // how often to start readings in ms
-int intervalextra = 4; // 
 
 // Distance history for rolling average (UNUSED AT PRESENT)
 //#define HISTORY_SIZE 10
@@ -144,8 +143,12 @@ void setup(void){
   server.on("/near", handleNearMode);   // mode seting
   server.on("/mid", handleMidMode);     // mode seting
   server.on("/far", handleFarMode);     // mode seting
-  server.on("/roiplus", handleRoiPlus);   // widen ROI
-  server.on("/roiminus", handleRoiMinus); // narrow ROI
+  server.on("/roiplus", handleRoiPlus);   // expand ROI
+  server.on("/roiminus", handleRoiMinus); // reduce ROI
+  server.on("/budgetplus", handleBudgetPlus);   // increase timing budget
+  server.on("/budgetminus", handleBudgetMinus); // decrease timing budget
+  server.on("/intervalplus", handleIntervalPlus);   // increase measurement interval
+  server.on("/intervalminus", handleIntervalMinus); // decrease measurement interval
 
   // Commands
   server.on("/on", handleOn);           // Sensor Enable
@@ -314,6 +317,43 @@ void handleRoiMinus()
   server.send(200, "text/plane", "roiminus");
   distanceSensor.setROI(roi, roi);
 }
+
+void handleBudgetPlus()
+{
+  int newbudget = budget + 10; // replace to step values from array
+  if (newbudget > 500) budget = 500; else budget = newbudget;
+  if (interval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
+  server.send(200, "text/plane", "budgetplus");
+  distanceSensor.setTimingBudgetInMs(budget);
+  distanceSensor.setIntermeasurementPeriod(interval);
+}
+
+void handleBudgetMinus()
+{
+  int newbudget = budget - 10;// replace to step values from array
+  if (newbudget < 20) budget = 20; else budget = newbudget;
+  server.send(200, "text/plane", "budgetminus");
+  distanceSensor.setTimingBudgetInMs(budget);
+}
+
+void handleIntervalPlus()
+{
+  int newinterval = interval + 10;
+  if (newinterval > 1500) interval = 1500; else interval = newinterval;
+  server.send(200, "text/plane", "intervalplus");
+  distanceSensor.setIntermeasurementPeriod(interval);
+}
+
+void handleIntervalMinus()
+{
+  int newinterval = interval - 10;
+  if (newinterval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
+  else interval = newinterval;
+  server.send(200, "text/plane", "intervalminus");
+  distanceSensor.setIntermeasurementPeriod(interval);
+}
+
+// Now come the actual reading requests/handlers
 
 void handleRange() {
   String out;
