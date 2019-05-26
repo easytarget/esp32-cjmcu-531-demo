@@ -3,6 +3,7 @@ Designed (initially) for the VL53L1X (4 meter) sensor:
 https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html
 
 Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (no password needed), and then browsing to '192.168.4.1' for the UI.
+
 ![The results](/docs/graph-panel.png)
 
 #### Requirements:
