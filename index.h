@@ -13,9 +13,6 @@ const char MAIN_page[] PROGMEM = R"=====(
     background-color: #056016;
     width: 100%;
   }
-  .modevalue{
-    
-  }
   .plot{
     width: 320px;
     height: 240px;
@@ -68,13 +65,13 @@ const char MAIN_page[] PROGMEM = R"=====(
   .lidar{
     display: none;
   }
-  .signal{
+  .timeout{
     color: #02b875;
     margin:none;
     padding: none;
     border: none;
     float: right;
-    font-size: 60%;
+    font-size: 100%;
   }
 </style>
 
@@ -91,13 +88,15 @@ const char MAIN_page[] PROGMEM = R"=====(
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L0X Demo
     <hr> 
-    <div id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
-    Connecting..</span></div>
-    <div style="text-align: left; font-size: 160%;font-weight: bold;">Range 
-    <span style="font-size: 80%;"> (mm) </span>:&nbsp;</div>
-    <div style="text-align: left; font-weight: bold;">
-    <span id="MODEValue">unknown</span>&nbsp;mode</div>
-    <div id="signal" class="signal">Timeout</span></div>
+    <div>
+      <span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
+      Connecting..</span>
+      <span style="text-align: left; font-size: 160%;font-weight: bold;">Range 
+      <span style="font-size: 80%;"> (mm) </span>:&nbsp;</span>
+      <span style="text-align: left; font-weight: bold;">
+      <span id="MODEValue">unknown</span>&nbsp;mode</span>
+      <div id="signal" class="signal">Timeout</div>
+    </div>
     <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
