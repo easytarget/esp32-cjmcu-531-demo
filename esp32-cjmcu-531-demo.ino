@@ -205,8 +205,6 @@ void setup(void){
   delay(250);
   if (distanceSensor.begin() == true)
     Serial.println("Sensor online!");
-  else
-     Serial.println("No Sensor!");
    
 
   // read sensor initial values
@@ -423,7 +421,7 @@ void handleRange() {
 void handleInfo()
 {
   String out;
-  StaticJsonDocument<300> infostamp;
+  StaticJsonDocument<350> infostamp;
   infostamp["Mode"] = mode;
   infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
   infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
@@ -442,6 +440,7 @@ void handleInfo()
   infostamp["ROIY"] = distanceSensor.getROIY();
   #ifdef LIDAR 
     infostamp["HasServo"] = true;
+    infostamp["Step"] = currentStep;
   #else
     infostamp["HasServo"] = false;
   #endif

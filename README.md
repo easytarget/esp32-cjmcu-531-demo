@@ -38,7 +38,7 @@ Not currently used:
 5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
 
 #### Demo setup
-![The Prototype](/docs/rangefinder-proto1.jpg)
+![The Prototype](/docs/lidar-rig.jpg)
 ![The results](/docs/status-panel.png)
 
 #### Plans

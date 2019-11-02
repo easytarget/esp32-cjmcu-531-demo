@@ -109,6 +109,9 @@ const char MAIN_page[] PROGMEM = R"=====(
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/off')" 
               title="Disable sensor">Off</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="toggleLidar()" 
+              title="Start Lidar">Lidar</button>
     </div>
     <div style="text-align: center;">
       Mode&nbsp;&nbsp;::&nbsp;&nbsp;
@@ -124,7 +127,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     <div style="text-align: center;" class="lidar">
       Turret&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/left')" 
-              title="Swing the sensor left">left</button>
+              title="Swing the sensor left">Left</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/right')" 
               title="Swing the sensor right">Right</button>
@@ -329,11 +332,15 @@ const char MAIN_page[] PROGMEM = R"=====(
     }
 
     // Updates page to show the default-hidden lidar controls
-    function enableLidar() {
+    function toggleLidar() {
       var x = document.getElementsByClassName("lidar");
       var i;
       for (i = 0; i < x.length; i++) {
-        x[i].style.display = block;
+        if (x[i].style.display === "none") {
+          x[i].style.display = "block";
+        } else {
+          x[i].style.display = "none";
+        }
       }
     }
 
