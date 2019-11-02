@@ -64,11 +64,12 @@ SFEVL53L1X distanceSensor;
 //#define INTERRUPT_PIN 3
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
 
-// Lidar Servo - Not implemented; (uncomment and fill in settings)
+// Lidar Servo - Not implemented; (uncomment the define below, and fill in settings)
 // setup below assumes a H-bridge stepper driver for a small (5v Unipolar) motor
 // Changes would be needed for a stepstick driver and a 'better' stepper, or a servo.
 
 #define LIDAR
+
 #ifdef LIDAR
   #include <Stepper.h>
   
@@ -97,8 +98,7 @@ SFEVL53L1X distanceSensor;
   Stepper lidarStepper(STEPS_PER_REV, 33, 26, 25, 27);
 
   int currentStep = 0; // Assume servo is at '0' to start.  
-
-
+  int deltaStep = (STEPS_PER_REV/36); // close to 10 degrees initially
 
 #endif
 
@@ -329,17 +329,17 @@ void handleFarMode()
 #ifdef LIDAR
   void handleLeft()
   {
-    int newStep = currentStep - (5 * STEPS_PER_DEGREE); 
+    int newStep = currentStep - deltaStep; 
     if (newStep < STEPS_MIN) stepTo(STEPS_MIN); else stepTo(newStep);
     server.send(200, "text/plane", "left");
   }
   
   void handleRight()
   {
-    int newStep = currentStep + (5* STEPS_PER_DEGREE); 
+    int newStep = currentStep + deltaStep; 
     if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
     server.send(200, "text/plane", "right");
-  }
+ }
 #endif
 
 void handleRoiPlus()
@@ -445,7 +445,7 @@ void handleInfo()
     infostamp["HasServo"] = false;
   #endif
   char id [8]; sprintf(id, "0x%x", distanceSensor.getSensorID());
-  infostamp["ID"] = id;
+  infostamp["Sensor ID"] = id;
 
   serializeJsonPretty(infostamp, out);
   server.send(200, "text/plane", out);
@@ -457,7 +457,8 @@ void handleInfo()
 
 void stepTo(int target) {
    if ( currentStep != target ) { // only move if needed)
-    delay(1); // DUMMYZ
+    lidarStepper.step(target-currentStep);
+    currentStep = target;
    }
 }
 

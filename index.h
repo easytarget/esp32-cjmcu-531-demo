@@ -63,7 +63,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     color: #555;
   }
   .lidar{
-    display: none;
+    display: block;
   }
   .timeout{
     color: #02b875;
@@ -89,13 +89,18 @@ const char MAIN_page[] PROGMEM = R"=====(
     <h3 style="text-align: center;">ESP32/VL53L0X Demo
     <hr> 
     <div>
+      <div id="signal" class="signal">Timeout</div>
+      <span id="ANGLEValue" style="float: right; font-size: 140%;font-weight: bold;">
+      Connecting..</span>
+      <span style="text-align: left; font-size: 120%;font-weight: bold;">Lidar Angle
+      <span style="font-size: 80%;"> (&deg;) </span>:</span>
+      <br>
       <span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
       Connecting..</span>
-      <span style="text-align: left; font-size: 160%;font-weight: bold;">Range 
-      <span style="font-size: 80%;"> (mm) </span>:&nbsp;</span>
-      <span style="text-align: left; font-weight: bold;">
+      <span style="float: left; font-size: 160%;font-weight: bold;">Range 
+      <span style="font-size: 80%;"> (mm) </span>:</span><br>
+      <span style="float: left; font-weight: bold;">
       <span id="MODEValue">unknown</span>&nbsp;mode</span>
-      <div id="signal" class="signal">Timeout</div>
     </div>
     <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
@@ -104,13 +109,13 @@ const char MAIN_page[] PROGMEM = R"=====(
     <hr>
     <div style="text-align: center;">
       Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/on')" 
+      <button class="button" onclick="httpGet('/on')"
               title="Enable sensor">On</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/off')" 
+      <button class="button" onclick="httpGet('/off')"
               title="Disable sensor">Off</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="toggleLidar()" 
+      <span class="lidar">&nbsp;&nbsp;||&nbsp;&nbsp;</span>
+      <button class="button" onclick="toggleLidar()"
               title="Start Lidar">Lidar</button>
     </div>
     <div style="text-align: center;">
@@ -253,8 +258,9 @@ const char MAIN_page[] PROGMEM = R"=====(
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
             }
           }
-          if (response.Angle) {
-            document.getElementById("RANGEValue").innerHTML += response.Angle;
+          // If an angle field is present, display it.
+          if (response.hasOwnProperty('Angle')) {
+            document.getElementById("ANGLEValue").innerHTML = response.Angle;
           }        
         
           if (response.RangeStatus == 0) {
@@ -284,16 +290,21 @@ const char MAIN_page[] PROGMEM = R"=====(
     }
     
     // Read and process the extended info, handle mode changes
-    var mode = "NONE";
+    var mode = "NONE";      // we dont know mode initially
+    var havelidar = false;  // assume no lidar untill it is reported as present
     function getInfo() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
           document.getElementById("statusPanel").innerHTML = this.responseText;
-          if (response.Mode != mode) {
+          if (response.Mode != mode) {  // mode changes
             mode = response.Mode;
             setMode(response.Mode);
+          }
+          if (response.HasServo && !havelidar) {  // lidar present?
+            havelidar = true;
+            showlidar();
           }
         }
       }
@@ -332,16 +343,12 @@ const char MAIN_page[] PROGMEM = R"=====(
     }
 
     // Updates page to show the default-hidden lidar controls
-    function toggleLidar() {
+    function showLidar() {
       var x = document.getElementsByClassName("lidar");
       var i;
       for (i = 0; i < x.length; i++) {
-        if (x[i].style.display === "none") {
-          x[i].style.display = "block";
-        } else {
-          x[i].style.display = "none";
+        x[i].style.display = "none";
         }
-      }
     }
 
     // Called when a mode change is detected; sets the graph etc.
