@@ -49,23 +49,57 @@ WebServer server(80);
 
 // Distance Sensor
 SFEVL53L1X distanceSensor;
-// Uncomment the following lines to use the optional shutdown and interrupt pins.
+
+/*  Wiring:  
+ * 3v3 on ESP32 goes to VCC on CMJU-531
+ * GND on ESP32 goes to GND on CMJU-531
+ * D21 (GPIO21, I2C SDA) on ESP32 goes to SDA on CMJU-531
+ * D22 (GPIO22, I2C SCL) on ESP32 goes to SCL on CMJU-531
+ * D5 (GPIO5) on ESP32 goes to XSHUT on CMJU-531 (shutdown control, not currently used)
+ * D18 (GPIO18) on ESP32 goes to GPIO1 on CMJU-531 (interrupt line, not currently used)
+*/
+
+// Uncomment the following lines if we start to use the shutdown and interrupt pins.
 //#define SHUTDOWN_PIN 2
 //#define INTERRUPT_PIN 3
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
 
 // Lidar Servo - Not implemented; (uncomment and fill in settings)
-//#define LIDAR
+// setup below assumes a H-bridge stepper driver for a small (5v Unipolar) motor
+// Changes would be needed for a stepstick driver and a 'better' stepper, or a servo.
+
+#define LIDAR
 #ifdef LIDAR
-  float angle = 0; // Assume servo is at '0' to start.
-  #define SERVO_ENABLE_PIN = unset
-  #define SERVO_STEP_PIN = unset
-  #define SERVO_DIRECTION_PIN = unset
-  #define SERVO_INVERT false
-  #define LEFT_ENDSTOP_PIN = unset
-  #define RIGHT_ENDSTOP_PIN = unset
-  #define DEGREES_PER_STEP = 1.8
-  #define MICROSTEPS_PER_STEP = 8
+  #include <Stepper.h>
+  
+  // Hardware based defines
+  // Total steps/revolution for motor 
+  // (5v geared motors are often multiples of 513 steps/rev)
+  #define STEPS_PER_REV 2052 
+
+  // a useful constant (STEPS_PER_REV / 360)
+  #define STEPS_PER_DEGREE 5.7 
+
+  // Stepper RPM (integer), my stepper maxes at 15rpm.
+  int STEPPER_RPM = 12;
+  
+  // No zero/endstop support or hardware yet..
+  // #define ENDSTOP_PIN unset
+  
+  // Soft endstops (180 degree sweep for demo unit)
+  #define STEPS_MIN -513
+  #define STEPS_MAX 513
+
+  // Reverse motor movement (NOT implemented yet)
+  // #define SERVO_INVERT false 
+
+  // initialize the stepper library on (free) pins 33, 26, 25, 27
+  Stepper lidarStepper(STEPS_PER_REV, 33, 26, 25, 27);
+
+  int currentStep = 0; // Assume servo is at '0' to start.  
+
+
+
 #endif
 
 // Other
@@ -81,6 +115,10 @@ void setup(void){
   // Misc. hardware
   pinMode(LED, OUTPUT);
 
+#ifdef LIDAR
+  lidarStepper.setSpeed(STEPPER_RPM);
+#endif
+
   // Serial
   Serial.begin(115200);
   Serial.println();
@@ -94,8 +132,8 @@ void setup(void){
   IPAddress ourIP(ACCESSPOINTIP);
   IPAddress ourMask(ACCESSPOINTMASK);
   WiFi.mode(WIFI_AP); //Access Point mode
-  WiFi.softAPConfig(ourIP, ourIP, ourMask);
   WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(ourIP, ourIP, ourMask);
   Serial.print("Access Point started: ");
   Serial.print(ssid);
   Serial.print(":");
@@ -164,8 +202,12 @@ void setup(void){
 
   // Start sensor
   Wire.begin();
+  delay(250);
   if (distanceSensor.begin() == true)
     Serial.println("Sensor online!");
+  else
+     Serial.println("No Sensor!");
+   
 
   // read sensor initial values
   roi = distanceSensor.getROIX();
@@ -289,15 +331,15 @@ void handleFarMode()
 #ifdef LIDAR
   void handleLeft()
   {
-    int newangle = angle - 10; 
-    if (newangle < -180) angle = -180; else angle = newangle;
+    int newStep = currentStep - (5 * STEPS_PER_DEGREE); 
+    if (newStep < STEPS_MIN) stepTo(STEPS_MIN); else stepTo(newStep);
     server.send(200, "text/plane", "left");
   }
   
   void handleRight()
   {
-    int newangle = angle + 10; 
-    if (newangle > 180) angle = 180; else angle = newangle;
+    int newStep = currentStep + (5* STEPS_PER_DEGREE); 
+    if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
     server.send(200, "text/plane", "right");
   }
 #endif
@@ -363,7 +405,7 @@ void handleRange() {
     range["Distance"] = distanceSensor.getDistance();
     range["RangeStatus"] = distanceSensor.getRangeStatus();
     #ifdef LIDAR
-      range["Angle"] = angle;
+      range["Angle"] = (currentStep / STEPS_PER_DEGREE);
     #endif
   }
   else
@@ -371,7 +413,7 @@ void handleRange() {
     range["Distance"] = -1;
     range["RangeStatus"] = -1;
     #ifdef LIDAR
-      range["Angle"] = angle;
+      range["Angle"] = (currentStep / STEPS_PER_DEGREE);
     #endif
   }
   serializeJsonPretty(range, out);
@@ -409,6 +451,17 @@ void handleInfo()
   serializeJsonPretty(infostamp, out);
   server.send(200, "text/plane", out);
 }
+
+//====================================
+// Other functions (eg stepper handlers)
+//====================================
+
+void stepTo(int target) {
+   if ( currentStep != target ) { // only move if needed)
+    delay(1); // DUMMYZ
+   }
+}
+
 
 //====================================
 // Main Loop (invokes client handler)
