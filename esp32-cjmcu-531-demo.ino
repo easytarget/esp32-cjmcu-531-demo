@@ -73,7 +73,7 @@ SFEVL53L1X distanceSensor;
 #ifdef LIDAR
   #include <Stepper.h>
   
-  // Pins 
+  // Pins, edit this if not using suggested wiring
   byte stepPin[4] = {27,25,26,33};
 
   // Total steps/revolution/degree for motor 
@@ -94,14 +94,17 @@ SFEVL53L1X distanceSensor;
   #define STEPS_MIN -513
   #define STEPS_MAX 513
 
-  // initialize the stepper library on (free) pins 33, 26, 25, 27
+  // initialize the stepper library
   Stepper lidarStepper(STEPS_PER_REV, stepPin[0], stepPin[1], stepPin[2], stepPin[3]);
 
-  int currentStep = 0; // Assume servo is at '0' to start.  
-  int deltaStep = (STEPS_PER_REV/36); // close to 10 degrees initially
-  bool stepperPwr = 0; // track power status
-  bool stepState[4] = {LOW,LOW,LOW,LOW}; // track state during power off
-
+  int currentStep = 0;                   // Assume servo is at '0' to start.  
+  int deltaStep = (STEPS_PER_REV/24);    // close to 15 degrees initially
+  bool stepperPwr = 0;                   // stepper power status
+  bool stepState[4] = {LOW,LOW,LOW,LOW}; // pin state during power off
+  int scanStep = (STEPS_PER_REV/120);    // steps per scan reading, defaults to ~3 degrees
+  int scanControl = 0;                   // 0=off, -1=stepping left, 1=stepping right
+  int scanMin = 0;                       // start of scan
+  int scanMax = 0;                       // end of scan
 #endif
 
 // Other
@@ -177,7 +180,6 @@ void setup(void){
   // Info requests
   server.on("/range", handleRange);     // Update of distance and reading status
   server.on("/info", handleInfo);       // more detailed sensor info
-  //server.on("/scan", handleScan);     // read a scan of data
 
   // Settings
   server.on("/near", handleNearMode);   // mode seting
@@ -194,6 +196,9 @@ void setup(void){
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
   #ifdef LIDAR
+    server.on("/s-scan60", handleScan60);             // Start a 60degree scan
+    server.on("/s-scan180", handleScan180);           // Start a full sweep scan
+    server.on("/s-scanstop", handleScanStop);         // Stop Scanning
     server.on("/s-left", handleStepperLeft);          // Go left
     server.on("/s-home", handleStepperHome);          // Go to center
     server.on("/s-right", handleStepperRight);        // Go right
@@ -361,6 +366,33 @@ void handleIntervalMinus()
 }
 
 #ifdef LIDAR
+  void handleScan60()
+  {
+    server.send(200, "text/plain", "60 degree scanning started");
+    usernotify("60 Degree Scanning Started");
+    scanMin = (-STEPS_PER_REV/12);
+    scanMax = (STEPS_PER_REV/12);
+    stepTo(scanMin);
+    scanControl = 1; // start at left scan position , moving right
+  }
+  
+  void handleScan180()
+  {
+    server.send(200, "text/plain", "180 degree scanning started");
+    usernotify("180 Degree Scanning Started");
+    scanMin = STEPS_MIN;
+    scanMax = STEPS_MAX;
+    stepTo(scanMin);
+    scanControl = 1; // start at left scan position , moving right
+  }
+ 
+  void handleScanStop()
+  {
+    server.send(200, "text/plain", "scanning stopped");
+    usernotify("Scanning Stopped");
+    scanControl = 0; // simply stop, nothing more.
+  }
+  
   void handleStepperLeft()
   {
     server.send(200, "text/plain", "stepper left");
@@ -436,6 +468,30 @@ void handleRange() {
   #endif
   serializeJsonPretty(range, out);
   server.send(200, "text/plain", out);
+
+  // Move and reverse etc when scanning.
+  #ifdef LIDAR
+      if (enabled == true && scanControl == -1) {
+            int newStep = currentStep - scanStep; 
+            if (newStep < scanMin) {
+              newStep = currentStep + scanStep;
+              scanControl=1;
+            }
+            stepTo(newStep);
+            delay(40); // let stepper settle
+            Serial.println(newStep);
+      }
+      if (enabled == true && scanControl == 1) {
+            int newStep = currentStep + scanStep; 
+            if (newStep > scanMax) {
+              newStep = currentStep - scanStep;
+              scanControl=-1;
+            }
+            stepTo(newStep);
+            delay(40); // let stepper settle
+            Serial.println(newStep);
+      }
+  #endif
 }
 
 void handleInfo()
@@ -500,12 +556,13 @@ void usernotify(char message[]) {
 
   // Disable the stepper, record pin state
 void stepperOff() {
-  delay(20); // wait for motor to settle, it drifts otherwise
+  delay(40); // wait for motor to settle, it drifts otherwise
   for (byte p=0; p < 4; p++) 
   {
     stepState[p] = digitalRead(stepPin[p]);
     digitalWrite(stepPin[p],LOW);
   }
+  scanControl = 0; // stop any in-progress scans
   stepperPwr = false;
 }
 
@@ -515,7 +572,7 @@ void stepperOn() {
   {
     digitalWrite(stepPin[p],stepState[p]);
   }
-  delay(20); // wait for motor to settle
+  delay(20); // wait for motor to settle back into energised position
   stepperPwr = true;
 }
 #endif
