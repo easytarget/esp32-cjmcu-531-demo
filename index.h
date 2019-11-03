@@ -13,7 +13,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     background-color: #056016;
     width: 100%;
   }
-  .plot{
+  .canvases{
     width: 320px;
     height: 240px;
     background-color: #777;
@@ -63,10 +63,10 @@ const char MAIN_page[] PROGMEM = R"=====(
     color: #555;
   }
   .lidar{
-    display: block;
+    display: none;
   }
   .timeout{
-    color: #02b875;
+    color: #FF7400;
     margin:none;
     padding: none;
     border: none;
@@ -88,24 +88,25 @@ const char MAIN_page[] PROGMEM = R"=====(
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L0X Demo
     <hr> 
-    <div>
-      <div id="signal" class="signal">Timeout</div>
-      <span id="ANGLEValue" style="float: right; font-size: 140%;font-weight: bold;">
-      Connecting..</span>
-      <span style="text-align: left; font-size: 120%;font-weight: bold;">Lidar Angle
-      <span style="font-size: 80%;"> (&deg;) </span>:</span>
-      <br>
-      <span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
-      Connecting..</span>
+    <div id="signal" class="signal">Comms Timeout</div><br>
+    <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">Connecting</span>
       <span style="float: left; font-size: 160%;font-weight: bold;">Range 
-      <span style="font-size: 80%;"> (mm) </span>:</span><br>
-      <span style="float: left; font-weight: bold;">
-      <span id="MODEValue">unknown</span>&nbsp;mode</span>
-    </div>
-    <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
+      <span style="font-size: 80%;"> (mm) </span>:</span></div><hr>
+    <div><span id="MODEValue"style="float: right; font-weight: bold;">unknown</span>&nbsp;
+      <span style="float: left;font-weight: bold;">Mode:</span></div><br>
+    <div class="lidar"><span id="ANGLEValue" style="float: right; font-weight: bold;">
+      Unknown</span>
+      <span style="float: left; font-weight: bold;">Lidar Angle
+      <span style="font-size: 90%;"> (&deg;) </span>:</span></div><hr>
+      
+    <canvas class="canvases" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
-    <h4 class="expander" id="plotControl" onclick="showPlot()">show plot</h4>
+    <h4 class="expander" id="plotControl" onclick="showPlot()">show history</h4>
+    <canvas class="canvases" id="scan" onclick="hideScan()" width=320 height=240>
+    This is a Canvas Element, if it is not displayed then we apologize, your browser 
+    is not compatible.</canvas>
+    <h4 class="expander" id="scanControl" onclick="showScan()">show scan</h4>
     <hr>
     <div style="text-align: center;">
       Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
@@ -114,9 +115,6 @@ const char MAIN_page[] PROGMEM = R"=====(
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/off')"
               title="Disable sensor">Off</button>
-      <span class="lidar">&nbsp;&nbsp;||&nbsp;&nbsp;</span>
-      <button class="button" onclick="toggleLidar()"
-              title="Start Lidar">Lidar</button>
     </div>
     <div style="text-align: center;">
       Mode&nbsp;&nbsp;::&nbsp;&nbsp;
@@ -133,6 +131,9 @@ const char MAIN_page[] PROGMEM = R"=====(
       Turret&nbsp;&nbsp;::&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/left')" 
               title="Swing the sensor left">Left</button>
+      &nbsp;&nbsp;||&nbsp;&nbsp;
+      <button class="button" onclick="httpGet('/zero')"
+              title="zero">Home</button>
       &nbsp;&nbsp;||&nbsp;&nbsp;
       <button class="button" onclick="httpGet('/right')" 
               title="Swing the sensor right">Right</button>
@@ -168,6 +169,14 @@ const char MAIN_page[] PROGMEM = R"=====(
           &nbsp;&nbsp;||&nbsp;&nbsp;
           <button class="button" onclick="httpGet('/roiplus')" 
              title="Make Region of Interest bigger">Bigger</button>
+        </div>
+        <div style="text-align: center;" class="lidar">
+          Step Delta&nbsp;&nbsp;::&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/deltastepminus')" 
+             title="Make step delta angle smaller">Smaller</button>
+          &nbsp;&nbsp;||&nbsp;&nbsp;
+          <button class="button" onclick="httpGet('/deltastepplus')" 
+             title="Make step delta angle bigger">Bigger</button>
         </div>
       </span>
     </div>
@@ -302,9 +311,9 @@ const char MAIN_page[] PROGMEM = R"=====(
             mode = response.Mode;
             setMode(response.Mode);
           }
-          if (response.HasServo && !havelidar) {  // lidar present?
+          if (response.HasServo == true) {  // lidar present?
             havelidar = true;
-            showlidar();
+            showLidar();
           }
         }
       }
@@ -321,6 +330,16 @@ const char MAIN_page[] PROGMEM = R"=====(
     function hidePlot() {
       document.getElementById("plot").style.display = "none";
       document.getElementById("plotControl").style.display = "block";
+    }
+  
+    function showScan() {
+      document.getElementById("scan").style.display = "block";
+      document.getElementById("scanControl").style.display = "none";
+    }
+    
+    function hideScan() {
+      document.getElementById("scan").style.display = "none";
+      document.getElementById("scanControl").style.display = "block";
     }
   
     function showControlPanel() {
@@ -347,7 +366,7 @@ const char MAIN_page[] PROGMEM = R"=====(
       var x = document.getElementsByClassName("lidar");
       var i;
       for (i = 0; i < x.length; i++) {
-        x[i].style.display = "none";
+        x[i].style.display = "block";
         }
     }
 

@@ -187,12 +187,15 @@ void setup(void){
   server.on("/budgetminus", handleBudgetMinus); // decrease timing budget
   server.on("/intervalplus", handleIntervalPlus);   // increase measurement interval
   server.on("/intervalminus", handleIntervalMinus); // decrease measurement interval
+  server.on("/deltastepplus", handleDeltaStepPlus);   // increase step delta
+  server.on("/deltastepminus", handleDeltaStepMinus); // decrease step delta
 
   // Commands
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
   #ifdef LIDAR
     server.on("/left", handleLeft);       // Step left
+    server.on("/zero", handleZero);       // Go to center
     server.on("/right", handleRight);     // Step right
   #endif
   
@@ -334,6 +337,12 @@ void handleFarMode()
     server.send(200, "text/plane", "left");
   }
   
+  void handleZero()
+  {
+    if (currentStep != 0) stepTo(0);
+    server.send(200, "text/plane", "zero");
+  }
+  
   void handleRight()
   {
     int newStep = currentStep + deltaStep; 
@@ -393,6 +402,22 @@ void handleIntervalMinus()
   distanceSensor.setIntermeasurementPeriod(interval);
 }
 
+#ifdef LIDAR
+  void handleDeltaStepPlus()
+  {
+    int newdelta = deltaStep + 5;
+    if (newdelta < 285) deltaStep = newdelta;
+    server.send(200, "text/plane", "deltastepplus");
+  }
+  
+  void handleDeltaStepMinus()
+  {
+    int newdelta = deltaStep - 5;
+    if (newdelta > 0) deltaStep = newdelta;
+    server.send(200, "text/plane", "deltastepminus");
+  }
+#endif
+
 // Now come the actual reading requests/handlers
 
 void handleRange() {
@@ -421,7 +446,7 @@ void handleRange() {
 void handleInfo()
 {
   String out;
-  StaticJsonDocument<350> infostamp;
+  StaticJsonDocument<360> infostamp;
   infostamp["Mode"] = mode;
   infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
   infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
@@ -441,6 +466,7 @@ void handleInfo()
   #ifdef LIDAR 
     infostamp["HasServo"] = true;
     infostamp["Step"] = currentStep;
+    infostamp["DeltaStep"] = deltaStep;
   #else
     infostamp["HasServo"] = false;
   #endif
