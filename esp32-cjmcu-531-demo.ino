@@ -12,6 +12,9 @@
 #include <Wire.h>
 #include <SparkFun_VL53L1X.h>
 
+// Uncomment to enable servo (lidar)
+#define LIDAR
+
 // Embedded web page contents
 #include "index.h"    
 
@@ -64,24 +67,24 @@ SFEVL53L1X distanceSensor;
 //#define INTERRUPT_PIN 3
 //SFEVL53L1X distanceSensor(Wire, SHUTDOWN_PIN, INTERRUPT_PIN);
 
-// Lidar Servo - Not implemented; (uncomment the define below, and fill in settings)
+// Lidar Settings
 // setup below assumes a H-bridge stepper driver for a small (5v Unipolar) motor
 // Changes would be needed for a stepstick driver and a 'better' stepper, or a servo.
-
-#define LIDAR
-
 #ifdef LIDAR
   #include <Stepper.h>
   
-  // Hardware based defines
-  // Total steps/revolution for motor 
+  // Pins 
+  byte stepPin[4] = {27,25,26,33};
+
+  // Total steps/revolution/degree for motor 
   // (5v geared motors are often multiples of 513 steps/rev)
   #define STEPS_PER_REV 2052 
+  #define STEPS_PER_DEG 5.7
 
-  // a useful constant (STEPS_PER_REV / 360)
-  #define STEPS_PER_DEGREE 5.7 
+  // Uncomment to reverse motor movement 
+  //#define SERVO_INVERT
 
-  // Stepper RPM (integer), my stepper maxes at 15rpm.
+  // Stepper speed in RPM (integer), my stepper maxes at 15rpm.
   int STEPPER_RPM = 12;
   
   // No zero/endstop support or hardware yet..
@@ -91,14 +94,13 @@ SFEVL53L1X distanceSensor;
   #define STEPS_MIN -513
   #define STEPS_MAX 513
 
-  // Reverse motor movement (NOT implemented yet)
-  // #define SERVO_INVERT false 
-
   // initialize the stepper library on (free) pins 33, 26, 25, 27
-  Stepper lidarStepper(STEPS_PER_REV, 33, 26, 25, 27);
+  Stepper lidarStepper(STEPS_PER_REV, stepPin[0], stepPin[1], stepPin[2], stepPin[3]);
 
   int currentStep = 0; // Assume servo is at '0' to start.  
   int deltaStep = (STEPS_PER_REV/36); // close to 10 degrees initially
+  bool stepperPwr = 0; // track power status
+  bool stepState[4] = {LOW,LOW,LOW,LOW}; // track state during power off
 
 #endif
 
@@ -123,7 +125,7 @@ void setup(void){
   Serial.begin(115200);
   Serial.println();
   Serial.println("Booting Sketch...");
-  
+
   // Turn the LED on once serial begun
   digitalWrite(LED, HIGH);          
 
@@ -187,16 +189,18 @@ void setup(void){
   server.on("/budgetminus", handleBudgetMinus); // decrease timing budget
   server.on("/intervalplus", handleIntervalPlus);   // increase measurement interval
   server.on("/intervalminus", handleIntervalMinus); // decrease measurement interval
-  server.on("/deltastepplus", handleDeltaStepPlus);   // increase step delta
-  server.on("/deltastepminus", handleDeltaStepMinus); // decrease step delta
 
   // Commands
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
   #ifdef LIDAR
-    server.on("/left", handleLeft);       // Step left
-    server.on("/zero", handleZero);       // Go to center
-    server.on("/right", handleRight);     // Step right
+    server.on("/s-left", handleStepperLeft);          // Go left
+    server.on("/s-home", handleStepperHome);          // Go to center
+    server.on("/s-right", handleStepperRight);        // Go right
+    server.on("/s-zero", handleStepperZero);          // Set current position as zero
+    server.on("/s-off", handleStepperOff);            // power off
+    server.on("/s-deltaplus", handleDeltaStepPlus);   // increase step delta
+    server.on("/s-deltaminus", handleDeltaStepMinus); // decrease step delta
   #endif
   
   // Start web server
@@ -227,7 +231,6 @@ void setup(void){
 
 }
 
-
 //=========================================
 // Handlers for responses to http requests
 //=========================================
@@ -238,12 +241,11 @@ void handleRoot() {
   digitalWrite(LED, HIGH);          // blink the LED
   String s = MAIN_page;             //Read HTML from the MAIN_page progmem
   server.send(200, "text/html", s); //Send web page
+  digitalWrite(LED, LOW);
   Serial.print("Sent the main page to: ");
   Serial.println(server.client().remoteIP().toString());
   delay(BLINK);
-  digitalWrite(LED, LOW);
-  delay(BLINK);
-  digitalWrite(LED, HIGH);   // twice
+  digitalWrite(LED, HIGH);   // blink again
   delay(BLINK);
   digitalWrite(LED, LOW);
 }
@@ -251,170 +253,166 @@ void handleRoot() {
 
 void handleOn()
 {
+  server.send(200, "text/plain", "sensor enabled");
+  usernotify("Sensor Enabled");
   enabled = true;
   distanceSensor.startRanging();
-  server.send(200, "text/plane", "sensor enabled");
-  
-  // blink LED and send to serial
-  digitalWrite(LED, HIGH);   
-  Serial.println("Turning On");
-  delay(BLINK);
-  digitalWrite(LED, LOW);
 }
 
 void handleOff()
 {
+  server.send(200, "text/plain", "sensor disabled");
+  usernotify("Sensor Disabled");
   enabled = false;
   distanceSensor.stopRanging();
-  server.send(200, "text/plane", "sensor disabled");
-
-  // blink LED and send to serial
-  digitalWrite(LED, HIGH);
-  Serial.println("Turning Off");
-  delay(BLINK);
-  digitalWrite(LED, LOW);
 }
 
 void handleNearMode()
 {
+  server.send(200, "text/plain", "near mode");
+  usernotify("Near Mode");
   mode = "near"; 
   budget = 20;
   interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeShort();
   distanceSensor.setTimingBudgetInMs(budget);
   distanceSensor.setIntermeasurementPeriod(interval);
-
-  server.send(200, "text/plane", "near mode");
-
-  // blink LED and send to serial
-  digitalWrite(LED, HIGH);
-  Serial.println("Mode: Near");
-  delay(BLINK);
-  digitalWrite(LED, LOW);
 }
 
 void handleMidMode()
 {
+  server.send(200, "text/plain", "mid mode");
+  usernotify("Mid Mode");
   mode = "mid"; 
   budget = 33;
   interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeLong();
   distanceSensor.setTimingBudgetInMs(budget);
   distanceSensor.setIntermeasurementPeriod(interval);
-
-  server.send(200, "text/plane", "mid mode");
-
-  // blink LED and send to serial
-  digitalWrite(LED, HIGH);
-  Serial.println("Mode: Mid");
-  delay(BLINK);
-  digitalWrite(LED, LOW);
 }
 
 void handleFarMode()
 {
+  server.send(200, "text/plain", "far mode");
+  usernotify("Far Mode");
   mode = "far"; 
   budget = 50;
   interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   distanceSensor.setDistanceModeLong();
   distanceSensor.setTimingBudgetInMs(budget);
   distanceSensor.setIntermeasurementPeriod(interval);
-
-  server.send(200, "text/plane", "far mode");
-
-  // blink LED and send to serial
-  digitalWrite(LED, HIGH);
-  Serial.println("Mode: Far");
-  delay(BLINK);
-  digitalWrite(LED, LOW);
 }
-
-#ifdef LIDAR
-  void handleLeft()
-  {
-    int newStep = currentStep - deltaStep; 
-    if (newStep < STEPS_MIN) stepTo(STEPS_MIN); else stepTo(newStep);
-    server.send(200, "text/plane", "left");
-  }
-  
-  void handleZero()
-  {
-    if (currentStep != 0) stepTo(0);
-    server.send(200, "text/plane", "zero");
-  }
-  
-  void handleRight()
-  {
-    int newStep = currentStep + deltaStep; 
-    if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
-    server.send(200, "text/plane", "right");
- }
-#endif
 
 void handleRoiPlus()
 {
+  server.send(200, "text/plain", "roi plus");
+  usernotify("ROI plus");
   int newroi = roi + 1;
   if (newroi > 16) roi = 16; else roi = newroi;
-  server.send(200, "text/plane", "roiplus");
   distanceSensor.setROI(roi, roi);
 }
 
 void handleRoiMinus()
 {
+  server.send(200, "text/plain", "roi minus");
+  usernotify("ROI Minus");
   int newroi = roi - 1;
   if (newroi < 4) roi = 4; else roi = newroi;
-  server.send(200, "text/plane", "roiminus");
   distanceSensor.setROI(roi, roi);
 }
 
 void handleBudgetPlus()
 {
+  server.send(200, "text/plain", "budget plus");
+  usernotify("Budget Plus");
   int newbudget = budget + 10; // replace to step values from array
   if (newbudget > 500) budget = 500; else budget = newbudget;
   if (interval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
-  server.send(200, "text/plane", "budgetplus");
   distanceSensor.setTimingBudgetInMs(budget);
   distanceSensor.setIntermeasurementPeriod(interval);
 }
 
 void handleBudgetMinus()
 {
+  server.send(200, "text/plain", "budget minus");
+  usernotify("Budget Minus");
   int newbudget = budget - 10;// replace to step values from array
   if (newbudget < 20) budget = 20; else budget = newbudget;
-  server.send(200, "text/plane", "budgetminus");
   distanceSensor.setTimingBudgetInMs(budget);
 }
 
 void handleIntervalPlus()
 {
+  server.send(200, "text/plain", "interval plus");
+  usernotify("Interval Plus");
   int newinterval = interval + 10;
   if (newinterval > 1500) interval = 1500; else interval = newinterval;
-  server.send(200, "text/plane", "intervalplus");
   distanceSensor.setIntermeasurementPeriod(interval);
 }
 
 void handleIntervalMinus()
 {
+  server.send(200, "text/plain", "interval minus");
+  usernotify("Interval Minus");
   int newinterval = interval - 10;
   if (newinterval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
   else interval = newinterval;
-  server.send(200, "text/plane", "intervalminus");
   distanceSensor.setIntermeasurementPeriod(interval);
 }
 
 #ifdef LIDAR
+  void handleStepperLeft()
+  {
+    server.send(200, "text/plain", "stepper left");
+    usernotify("Stepper Left");
+    int newStep = currentStep - deltaStep; 
+    if (newStep < STEPS_MIN) stepTo(STEPS_MIN); else stepTo(newStep);
+  }
+  
+  void handleStepperHome()
+  {
+    server.send(200, "text/plain", "stepper home");
+    usernotify("Stepper Home");
+    if (currentStep != 0) stepTo(0);
+    stepperOff();
+  }
+  
+  void handleStepperRight()
+  {
+    server.send(200, "text/plain", "stepper right");
+    usernotify("Stepper Right");
+    int newStep = currentStep + deltaStep; 
+    if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
+  }
+  
+  void handleStepperZero()
+  {
+    server.send(200, "text/plain", "stepper zero");
+    usernotify("Stepper Zero");
+    currentStep = 0;
+  }
+
+  void handleStepperOff()
+  {
+    server.send(200, "text/plain", "stepper off");
+    usernotify("Stepper Off");
+    stepperOff();
+  }
+
   void handleDeltaStepPlus()
   {
+    server.send(200, "text/plain", "stepper delta plus");
+    usernotify("Stepper Delta Plus");
     int newdelta = deltaStep + 5;
     if (newdelta < 285) deltaStep = newdelta;
-    server.send(200, "text/plane", "deltastepplus");
   }
   
   void handleDeltaStepMinus()
   {
+    server.send(200, "text/plain", "stepper delta minus");
+    usernotify("Stepper Delta Minus");
     int newdelta = deltaStep - 5;
     if (newdelta > 0) deltaStep = newdelta;
-    server.send(200, "text/plane", "deltastepminus");
   }
 #endif
 
@@ -427,20 +425,17 @@ void handleRange() {
   {
     range["Distance"] = distanceSensor.getDistance();
     range["RangeStatus"] = distanceSensor.getRangeStatus();
-    #ifdef LIDAR
-      range["Angle"] = (currentStep / STEPS_PER_DEGREE);
-    #endif
   }
   else
   {
     range["Distance"] = -1;
     range["RangeStatus"] = -1;
-    #ifdef LIDAR
-      range["Angle"] = (currentStep / STEPS_PER_DEGREE);
-    #endif
   }
+  #ifdef LIDAR
+    range["Angle"] = roundf((currentStep * 10) / STEPS_PER_DEG)/10;
+  #endif
   serializeJsonPretty(range, out);
-  server.send(200, "text/plane", out);
+  server.send(200, "text/plain", out);
 }
 
 void handleInfo()
@@ -474,20 +469,56 @@ void handleInfo()
   infostamp["Sensor ID"] = id;
 
   serializeJsonPretty(infostamp, out);
-  server.send(200, "text/plane", out);
+  server.send(200, "text/plain", out);
 }
 
 //====================================
 // Other functions (eg stepper handlers)
 //====================================
 
-void stepTo(int target) {
-   if ( currentStep != target ) { // only move if needed)
-    lidarStepper.step(target-currentStep);
-    currentStep = target;
-   }
+// flash led and dump a message to serial to notify user
+void usernotify(char message[]) {
+  digitalWrite(LED, HIGH);   
+  Serial.println(message);
+  delay(BLINK);
+  digitalWrite(LED, LOW);
 }
 
+#ifdef LIDAR
+  // Go to a target position and set that as current
+  void stepTo(int target) {
+     if ( currentStep != target ) { // only move if needed)
+      if ( !stepperPwr ) stepperOn(); // wake stepper as needed
+      #ifdef SERVO_INVERT
+        lidarStepper.step(-(target-currentStep));
+      #else
+        lidarStepper.step((target-currentStep));
+      #endif
+      currentStep = target;
+     }
+  }
+
+  // Disable the stepper, record pin state
+void stepperOff() {
+  delay(20); // wait for motor to settle, it drifts otherwise
+  for (byte p=0; p < 4; p++) 
+  {
+    stepState[p] = digitalRead(stepPin[p]);
+    digitalWrite(stepPin[p],LOW);
+  }
+  stepperPwr = false;
+}
+
+// Enable the stepper, restore last pin state
+void stepperOn() {
+  for (byte p=0; p < 4; p++) 
+  {
+    digitalWrite(stepPin[p],stepState[p]);
+  }
+  delay(20); // wait for motor to settle
+  stepperPwr = true;
+}
+#endif
 
 //====================================
 // Main Loop (invokes client handler)
