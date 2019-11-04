@@ -90,9 +90,9 @@ SFEVL53L1X distanceSensor;
   // No zero/endstop support or hardware yet..
   // #define ENDSTOP_PIN unset
   
-  // Soft endstops (180 degree sweep for demo unit)
-  #define STEPS_MIN -513
-  #define STEPS_MAX 513
+  // Soft endstops (240 degree sweep for demo unit)
+  #define STEPS_MIN -769
+  #define STEPS_MAX 769
 
   // initialize the stepper library
   Stepper lidarStepper(STEPS_PER_REV, stepPin[0], stepPin[1], stepPin[2], stepPin[3]);
@@ -110,6 +110,8 @@ SFEVL53L1X distanceSensor;
 // Other
 #define LED 2    // On-Board LED pin
 #define BLINK 30 // On-Board LED blink time in ms
+
+#define BUTTON 0 // On-Board button, aka 'boot', manual home and power off, comment out to disable.
 
 
 //===============================================================
@@ -196,9 +198,10 @@ void setup(void){
   server.on("/on", handleOn);           // Sensor Enable
   server.on("/off", handleOff);         // Sensor Disable
   #ifdef LIDAR
-    server.on("/s-scan60", handleScan60);             // Start a 60degree scan
-    server.on("/s-scan180", handleScan180);           // Start a full sweep scan
+    server.on("/s-scan90", handleScan90);             // Start a 60degree scan
+    server.on("/s-scanfull", handleScanFull);          // Start a full sweep scan
     server.on("/s-scanstop", handleScanStop);         // Stop Scanning
+    server.on("/s-scanback", handleScanBack);         // Reverse Scanning
     server.on("/s-left", handleStepperLeft);          // Go left
     server.on("/s-home", handleStepperHome);          // Go to center
     server.on("/s-right", handleStepperRight);        // Go right
@@ -206,6 +209,8 @@ void setup(void){
     server.on("/s-off", handleStepperOff);            // power off
     server.on("/s-deltaplus", handleDeltaStepPlus);   // increase step delta
     server.on("/s-deltaminus", handleDeltaStepMinus); // decrease step delta
+    server.on("/s-scanplus", handleScanStepPlus);     // increase scan delta
+    server.on("/s-scanminus", handleScanStepMinus);   // decrease scan delta
   #endif
   
   // Start web server
@@ -366,20 +371,20 @@ void handleIntervalMinus()
 }
 
 #ifdef LIDAR
-  void handleScan60()
+  void handleScan90()
   {
-    server.send(200, "text/plain", "60 degree scanning started");
-    usernotify("60 Degree Scanning Started");
-    scanMin = (-STEPS_PER_REV/12);
-    scanMax = (STEPS_PER_REV/12);
+    server.send(200, "text/plain", "90 degree scanning started");
+    usernotify("90 Degree Scanning Started");
+    scanMin = (-STEPS_PER_REV/8);
+    scanMax = (STEPS_PER_REV/8);
     stepTo(scanMin);
     scanControl = 1; // start at left scan position , moving right
   }
   
-  void handleScan180()
+  void handleScanFull()
   {
-    server.send(200, "text/plain", "180 degree scanning started");
-    usernotify("180 Degree Scanning Started");
+    server.send(200, "text/plain", "Full scanning started");
+    usernotify("Full Degree Scanning Started");
     scanMin = STEPS_MIN;
     scanMax = STEPS_MAX;
     stepTo(scanMin);
@@ -391,6 +396,14 @@ void handleIntervalMinus()
     server.send(200, "text/plain", "scanning stopped");
     usernotify("Scanning Stopped");
     scanControl = 0; // simply stop, nothing more.
+  }
+  
+  void handleScanBack()
+  {
+    server.send(200, "text/plain", "scan direction reversed");
+    usernotify("Scan Direction Reversed");
+    if (scanControl == 1) scanControl = -1;
+    else if (scanControl == -1) scanControl = 1;
   }
   
   void handleStepperLeft()
@@ -444,7 +457,24 @@ void handleIntervalMinus()
     server.send(200, "text/plain", "stepper delta minus");
     usernotify("Stepper Delta Minus");
     int newdelta = deltaStep - 5;
-    if (newdelta > 0) deltaStep = newdelta;
+    if (newdelta >= 0) deltaStep = newdelta;
+  }
+  void handleScanStepPlus()
+  {
+    int newdelta;
+    server.send(200, "text/plain", "stepper scan steps plus");
+    usernotify("Stepper Scan Steps Plus");
+    if (scanStep < 9) newdelta = scanStep + 1; else newdelta = scanStep + 3;
+    if (newdelta < 120) scanStep = newdelta;
+  }
+  
+  void handleScanStepMinus()
+  {
+    int newdelta;
+    server.send(200, "text/plain", "stepper scan steps minus");
+    usernotify("Stepper Scan Steps Minus");
+    if (scanStep < 9) newdelta = scanStep - 1; else newdelta = scanStep - 3;
+    if (newdelta >= 1) scanStep = newdelta;
   }
 #endif
 
@@ -479,7 +509,6 @@ void handleRange() {
             }
             stepTo(newStep);
             delay(40); // let stepper settle
-            Serial.println(newStep);
       }
       if (enabled == true && scanControl == 1) {
             int newStep = currentStep + scanStep; 
@@ -489,7 +518,6 @@ void handleRange() {
             }
             stepTo(newStep);
             delay(40); // let stepper settle
-            Serial.println(newStep);
       }
   #endif
 }
@@ -518,6 +546,7 @@ void handleInfo()
     infostamp["HasServo"] = true;
     infostamp["Step"] = currentStep;
     infostamp["DeltaStep"] = deltaStep;
+    infostamp["ScanStep"] = scanStep;
   #else
     infostamp["HasServo"] = false;
   #endif
@@ -532,7 +561,7 @@ void handleInfo()
 // Other functions (eg stepper handlers)
 //====================================
 
-// flash led and dump a message to serial to notify user
+// flash led and dump a message to serial to log actions
 void usernotify(char message[]) {
   digitalWrite(LED, HIGH);   
   Serial.println(message);
@@ -583,5 +612,19 @@ void stepperOn() {
 
 void loop(void){
   server.handleClient();
+  #ifdef BUTTON
+    // Deal with the (optional) active-low 'boot' button on the board.
+    if (digitalRead(BUTTON) == LOW ) {
+      delay(50); // crude debounce
+      if (digitalRead(BUTTON) == LOW) {
+        /// home and disable stepper
+        if (currentStep != 0) stepTo(0);
+        stepperOff();
+        Serial.println("Homed via button");
+        // wait for button release
+        while(digitalRead(BUTTON) == LOW) delay(10);
+      }
+    }
+  #endif
   delay(1);
 }
