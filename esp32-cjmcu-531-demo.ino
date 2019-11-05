@@ -26,10 +26,12 @@
 // Embedded web page (stored in progmem)
 #include "index.h"    
 
-// Sensor setup
-int range;             // Latest reading
-int budgetIndex = 4 ;  // reading time budgets in ms. (bigger==more accurate but slower)
+// Sensor setup; see:
+// https://learn.sparkfun.com/tutorials/qwiic-distance-sensor-vl53l1x-hookup-guide#library-overview
+int range;                 // Latest reading
+int budgetIndex = 4 ;      // reading time budgets in ms. (bigger==more accurate but slower)
 int budgetValue[7] = {15,20,33,50,100,200,500}; // default 100ms
+byte opticalCenter = 199; 
 
 // Settings
 bool enabled = true; // main enabled/disabled control
@@ -310,7 +312,7 @@ void handleRoiPlus()
   usernotify("ROI plus"); 
   int newroi = distanceSensor.getROIX() + 1;
   if (newroi > 16) newroi = 16;
-  distanceSensor.setROI(newroi, newroi);
+  distanceSensor.setROI(newroi, newroi, opticalCenter);
 }
 
 void handleRoiMinus()
@@ -319,7 +321,7 @@ void handleRoiMinus()
   usernotify("ROI Minus");
   int newroi = distanceSensor.getROIX() - 1;
   if (newroi < 4) newroi = 4;
-  distanceSensor.setROI(newroi, newroi);
+  distanceSensor.setROI(newroi, newroi, opticalCenter);
 }
 
 void handleBudgetPlus()
@@ -455,7 +457,7 @@ void handleIntervalMinus()
     int newdelta;
     server.send(200, "text/plain", "stepper scan delta plus");
     usernotify("Stepper Scan Delta Plus");
-    if (scanStep < 9) newdelta = scanStep + 1; else newdelta = scanStep + 3;
+    if (scanStep < 10) newdelta = scanStep + 1; else newdelta = scanStep + 3;
     if (newdelta < 120) scanStep = newdelta;
   }
   
@@ -464,7 +466,7 @@ void handleIntervalMinus()
     int newdelta;
     server.send(200, "text/plain", "stepper scan delta minus");
     usernotify("Stepper Scan Delta Minus");
-    if (scanStep < 9) newdelta = scanStep - 1; else newdelta = scanStep - 3;
+    if (scanStep < 11) newdelta = scanStep - 1; else newdelta = scanStep - 3;
     if (newdelta >= 1) scanStep = newdelta;
   }
 #endif
