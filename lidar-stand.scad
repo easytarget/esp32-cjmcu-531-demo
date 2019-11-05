@@ -16,15 +16,15 @@ motY = 40;
 
 
 if (fitting) 
-    mount(pos=[0,motY+motsoffset-3.5,40],rot=-90);
+    mount(pos=[0,motY+motsoffset-3.5,50],rot=-90);
 else
-    mount([0,-3.5,16],-90); 
+    mount([0,-3.5,26],-90); 
     
 if (fitting) {
     color("darkgreen",0.8) mcu(pos=[0,mcuY,20]);
     color("green",0.8) drv(pos=[0,drvY,12]);
     color("grey",0.8) mot(pos=[0,motY,0]);
-    color("midnightblue",0.8) tof(pos=[0,motY+motsoffset+5.5,37]);
+    color("midnightblue",0.8) tof(pos=[0,motY+motsoffset+4.5,50.7],rot=95);
 }
 
 // Parts & Dimensions
@@ -59,15 +59,15 @@ tofsboardW=15.8;
 
 
 
-module mount(pos=[0,0,0],rot=0) 
-    translate(pos) rotate([rot,0,0]) {
+module mount(pos=[0,0,0],rot=0) translate(pos) rotate([rot,0,0]) {
+    translate([0,0,-1]) rotate([5,0,0])
     linear_extrude(height=7.5) {
-        translate([-tofsholeW/2,3])
+        translate([-tofsholeW/2,0])
         difference() {
             circle(d=tofsholeD*1.5);
             rotate(30) circle(d=tofsholeD*0.75,$fn=6);
         }
-        translate([tofsholeW/2,3])
+        translate([tofsholeW/2,0])
         difference() {
             circle(d=tofsholeD*1.5);
             rotate(30) circle(d=tofsholeD*0.75,$fn=6);
@@ -75,31 +75,35 @@ module mount(pos=[0,0,0],rot=0)
     }
     difference() {
         hull () {
-            translate([10,13,0]) scale([0.5,1,1])
+            translate([10,23,0]) scale([0.5,1,1])
             cylinder(d=6,h=7);
-            translate([-10,13,0]) scale([0.5,1,1])
+            translate([-10,23,0]) scale([0.5,1,1])
             cylinder(d=6,h=7);
         }
-        translate([0,13,3.5])
+        translate([0,23,3.5])
         rotate([90,0,0])
         intersection() {
-            cylinder(d=motshaft,h=7,center=true);
-            cube([motshaft,motsflat-0.2,7],center=true);
+            cylinder(d=motshaft+0.3,h=7,center=true);
+            cube([motshaft+1,motsflat,7],center=true);
         }
         translate([0,13,3.5])
-        cube([15,7,0.4],center=true);
+        cube([15,7,0.6],center=true);
     }
     hull () {
-        translate([10,13,0]) scale([0.5,1,1])
+        translate([10,23,0]) scale([0.5,1,1])
         cylinder(d=6,h=7);
-        translate([10,5,0]) scale([1,0.1,1])
-        cylinder(d=3,h=7.5);
+        translate([10,2,0])
+        rotate([5,0,0])
+        scale([1,0.1,1]) 
+        cylinder(d=3,h=6);
     }
     hull () {
-        translate([-10,13,0]) scale([0.5,1,1])
+        translate([-10,23,0]) scale([0.5,1,1])
         cylinder(d=6,h=7);
-        translate([-10,5,0]) scale([1,0.1,1])
-        cylinder(d=3,h=7.5);
+        translate([-10,2,0])
+        rotate([5,0,0])
+        scale([1,0.1,1])
+        cylinder(d=3,h=6);
     }
 }
     
