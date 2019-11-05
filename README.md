@@ -50,19 +50,6 @@ https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 #### Issues
 * I have noticed the CMJU-531 I2C comms seem to lock up occasionally and needs a full power cycle to resume. This has only happened when I'm rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
 
-#### Logging
-```
-Booting Sketch...
-Access Point started: VL53L0X-demo:
-AP Address: 192.168.4.1
-HTTP server started
-Mode: Mid
-Sent the main page
-Sent the main page
-Mode: Near
-Turning On
-Mode: Mid
-```
-
-#### WIP..
-I'm working on this...
+#### Base
+Mounts the sensor at a slight angle to avoid rangefinding the edge of the table.
+![The results](/docs/lidar-stand.png)
