@@ -2,6 +2,9 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
 
+<!-- Page served by ESP32 CJMCU-531 demo; see https://github.com/easytarget/esp32-cjmcu-531-demo/ 
+     Design/Coding by Owen; https://easytarget.org/ -->
+
 <!-- Begin with style -->
 <style>
   a{
@@ -13,7 +16,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     background-color: #056016;
     width: 100%;
   }
-  .plot{
+  .canvases{
     width: 320px;
     height: 240px;
     background-color: #777;
@@ -36,7 +39,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     padding: 3px 6px ;
     text-align: left;
     display: inline-block;
-    margin: 3px 6px;
+    margin: 3px 4px;
     cursor: pointer;
     outline-style:none;
   }
@@ -47,7 +50,8 @@ const char MAIN_page[] PROGMEM = R"=====(
     padding: 30px;
     padding-top: 2px;
     box-sizing: border-box;
-    color: #555;
+    color: #056016; 
+    
     margin:20px;
     display: block;
     margin-left: auto;
@@ -65,13 +69,9 @@ const char MAIN_page[] PROGMEM = R"=====(
   .lidar{
     display: none;
   }
-  .timeout{
-    color: #02b875;
-    margin:none;
-    padding: none;
-    border: none;
-    float: right;
-    font-size: 100%;
+  .signal{
+    color: #8e0b0b;
+    text-align: right;
   }
 </style>
 
@@ -86,90 +86,99 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!-- The page itself -->
 <body>
   <div class="card">
-    <h3 style="text-align: center;">ESP32/VL53L0X Demo
+    <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
     <hr> 
-    <div>
-      <span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">
-      Connecting..</span>
-      <span style="text-align: left; font-size: 160%;font-weight: bold;">Range 
-      <span style="font-size: 80%;"> (mm) </span>:&nbsp;</span>
-      <span style="text-align: left; font-weight: bold;">
-      <span id="MODEValue">unknown</span>&nbsp;mode</span>
-      <div id="signal" class="signal">Timeout</div>
-    </div>
-    <canvas class="plot" id="plot" onclick="hidePlot()" width=320 height=240>
+    <div id="signal" class="signal">Comms Timeout</div>
+    <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">?</span>
+      <span style="float: left; font-size: 160%;font-weight: bold;">Range:</span></div><hr>
+    <div><span id="MODEValue"style="float: right; font-weight: bold;">unknown</span>&nbsp;
+      <span style="float: left;font-weight: bold;">Mode:</span></div>
+    <div class="lidar"><span id="ANGLEValue" style="float: right; font-weight: bold;">
+      Unknown</span>
+      <span style="float: left; font-weight: bold;">Lidar Angle:</span></div><hr>
+      
+    <span class="lidar"><canvas class="canvases" id="scan" onclick="hideScan()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
-    <h4 class="expander" id="plotControl" onclick="showPlot()">show plot</h4>
+    <div class="expander" id="scanControl" onclick="showScan()"style="font-size: 110%; font-weight: bold;">show scan</div>
+    <div class="expander" id="scanClear" onclick="clearScan()" style="font-size: 90%; display: none;">
+    clear scan</div></span>
+    <canvas class="canvases" id="plot" onclick="hidePlot()" width=320 height=240>
+    This is a Canvas Element, if it is not displayed then we apologize, your browser 
+    is not compatible.</canvas>
+    <div class="expander" id="plotControl" onclick="showPlot()" style="font-size: 110%; font-weight: bold;">show history</div>
+
     <hr>
-    <div style="text-align: center;">
-      Sensor&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/on')" 
-              title="Enable sensor">On</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/off')" 
+    <div style="text-align: left;">
+      Sensor&nbsp;::<button class="button" onclick="httpGet('/on')"
+              title="Enable sensor">On</button>|<button class="button" onclick="httpGet('/off')"
               title="Disable sensor">Off</button>
     </div>
-    <div style="text-align: center;">
-      Mode&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/near')" 
-              title="Near range (max 1.3m, fastest)">Near</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/mid')" 
-              title="Mid Range (max 4m, fast but less accurate at range)">Mid</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/far')" 
+    <div style="text-align: left;">
+      Mode&nbsp;::<button class="button" onclick="httpGet('/near')" 
+              title="Near range (max 1.3m, fastest)">Near</button>|<button class="button" onclick="httpGet('/mid')" 
+              title="Mid Range (max 4m, fast but less accurate at range)">Mid</button>|<button class="button" onclick="httpGet('/far')" 
               title="Far Range (max 4m, slower but more accurate over whole range)">Far</button>
     </div>
-    <div style="text-align: center;" class="lidar">
-      Turret&nbsp;&nbsp;::&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/left')" 
-              title="Swing the sensor left">left</button>
-      &nbsp;&nbsp;||&nbsp;&nbsp;
-      <button class="button" onclick="httpGet('/right')" 
+    <div style="text-align: left;" class="lidar">
+      Scan&nbsp;::<button class="button" onclick="httpGet('/s-scan90');showScan()" 
+              title="scan 90 degrees around current direction">90&deg;</button>|<button class="button" onclick="httpGet('/s-scanfull');showScan()"
+              title="Scan 270 degrees">270&deg;</button>|<button class="button" onclick="httpGet('/s-scanstop')" 
+              title="Stop scanning">Stop</button>|<button class="button" onclick="httpGet('/s-scanback')" 
+              title="Reverse scanning">Back</button>
+    </div>
+    <div style="text-align: left;" class="lidar">
+      Motion&nbsp;::<button class="button" onclick="httpGet('/s-left')" 
+              title="Swing the sensor left">Left</button>|<button class="button" onclick="httpGet('/s-home')"
+              title="Go to the Home (zero) position and turn stepper off">Home</button>|<button class="button" onclick="httpGet('/s-right')" 
               title="Swing the sensor right">Right</button>
     </div>
     <div>
       <h3 onclick="showControlPanel()" id="showControl" 
         class="expander">
       more control</h3>
-      <span id="controlPanel" style="color: #056016; display: none;">
+      <span id="controlPanel" style="display: none;">
         <h3 onclick="hideControlPanel()" class="expander">
           less control
         </h3>
-        <div style="text-align: center;">
-          TimingBudget&nbsp;&nbsp;::&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/budgetminus')" 
-             title="Make Timing Budget smaller">Smaller</button>
-          &nbsp;&nbsp;||&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/budgetplus')" 
+        <div style="text-align: left;">
+          TimingBudget&nbsp;::<button class="button" onclick="httpGet('/budgetminus')" 
+             title="Make Timing Budget smaller">Smaller</button>|<button class="button" onclick="httpGet('/budgetplus')" 
              title="Make Timing Budget bigger">Bigger</button>
         </div>
-        <div style="text-align: center;">
-          Interval&nbsp;&nbsp;::&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/intervalminus')" 
-             title="Make InterMeasurement period smaller">Smaller</button>
-          &nbsp;&nbsp;||&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/intervalplus')" 
+        <div style="text-align: left;">
+          Interval&nbsp;::<button class="button" onclick="httpGet('/intervalminus')" 
+             title="Make InterMeasurement period smaller">Smaller</button>|<button class="button" onclick="httpGet('/intervalplus')" 
              title="Make InterMeasurement period bigger">Bigger</button>
         </div>
-        <div style="text-align: center;">
-          ROI&nbsp;&nbsp;::&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/roiminus')" 
-             title="Make Region of Interest smaller">Smaller</button>
-          &nbsp;&nbsp;||&nbsp;&nbsp;
-          <button class="button" onclick="httpGet('/roiplus')" 
+        <div style="text-align: left;">
+          ROI&nbsp;::<button class="button" onclick="httpGet('/roiminus')" 
+             title="Make Region of Interest smaller">Smaller</button>|<button class="button" onclick="httpGet('/roiplus')" 
              title="Make Region of Interest bigger">Bigger</button>
+        </div>
+        <div style="text-align: left;" class="lidar">
+          Scan Step&nbsp;::<button class="button" onclick="httpGet('/s-scanminus')" 
+             title="Make scan steps smaller">Smaller</button>|<button class="button" onclick="httpGet('/s-scanplus')" 
+             title="Make scan steps bigger">Bigger</button>
+        </div>
+        <div style="text-align: left;" class="lidar">
+          Manual Step&nbsp;::<button class="button" onclick="httpGet('/s-manualminus')" 
+             title="Make manual steps smaller">Smaller</button>|<button class="button" onclick="httpGet('/s-manualplus')" 
+             title="Make manual steps bigger">Bigger</button>
+        </div>
+        <div style="text-align: left;" class="lidar">
+          Step Control&nbsp;::<button class="button" onclick="httpGet('/s-off')" 
+             title="Power Down the stepper">Off</button>|
+          <button class="button" onclick="httpGet('/s-zero')" 
+             title="Declare new Zero position">Zero</button>
         </div>
       </span>
     </div>
-    <h3 class="expander" onclick="toggleStatusPanel()">
-      status</h3>
-    <pre><span id="statusPanel" style="color: #056016; display: none;">
-      Connecting..</span></pre> 
-    <p style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
-    title="Project Home">GitHub</a>::</p>
-
+    <span id="statusPanel" class="expander" style="display: none; text-align: left;">
+    <pre style="font-size: 110%; font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
+    Connecting..</pre></span>
+    <div style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
+    title="Project home repo">GitHub</a>::</div>
   </div>
 
   <!-- The scripting -->
@@ -184,7 +193,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     // Create the recurring interval task to refresh the info data 
     setInterval(function() {
       getInfo();
-    }, 500); // interval in ms.
+    }, 333); // interval in ms.
 
     // make a simple http request, return result, used to trigger actions from buttons
     function httpGet(theUrl)
@@ -198,99 +207,121 @@ const char MAIN_page[] PROGMEM = R"=====(
     // Loop to get, process and display value readings
     var plotline = 0;
     var plotscale = 20;
+    
     function getValues() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
-          document.getElementById("signal").style.color = "#02b875";
+          document.getElementById("signal").innerHTML = "&nbsp;";
           if (response.RangeStatus < 0) {
-            document.getElementById("RANGEValue").innerHTML = "Disabled";
+            document.getElementById("RANGEValue").innerHTML = "<span style=\"font-size: 80%;\">Disabled</span>";
             document.getElementById("RANGEValue").style.color = "#555";
           } else {
             switch (response.RangeStatus) {
                 case 0:
                   document.getElementById("RANGEValue").innerHTML = response.Distance;
-                  document.getElementById("RANGEValue").style.color = "#056016";
+                  document.getElementById("RANGEValue").innerHTML += "<span style=\"font-size: 66%;\">mm</span>";
+                  document.getElementById("RANGEValue").style.color = "#555";
                 break;
                 case 1:
-                  document.getElementById("RANGEValue").innerHTML = "Sigma Fail";
+                  document.getElementById("signal").innerHTML = "Sigma Fail";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 2:
-                  document.getElementById("RANGEValue").innerHTML = "Signal fail";
+                  document.getElementById("signal").innerHTML = "Signal fail";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 4:
-                  document.getElementById("RANGEValue").innerHTML = "Out of Bounds";
+                  document.getElementById("signal").innerHTML = "Out of Bounds";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 5:
-                  document.getElementById("RANGEValue").innerHTML = "Hardware Fail";
+                  document.getElementById("signal").innerHTML = "Hardware Fail";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 7:
-                  document.getElementById("RANGEValue").innerHTML = "Wrapped target";
+                  document.getElementById("signal").innerHTML = "Wrapped target";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 8:
-                  document.getElementById("RANGEValue").innerHTML = "Internal Error";
+                  document.getElementById("signal").innerHTML = "Internal Error";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 14:
-                  document.getElementById("RANGEValue").innerHTML = "Invalid Result";
+                  document.getElementById("signal").innerHTML = "Invalid Result";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 case 255:
-                  document.getElementById("RANGEValue").innerHTML = "No Response";
+                  document.getElementById("signal").innerHTML = "No Response";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b";
                 break;
                 default:
-                  document.getElementById("RANGEValue").innerHTML = "Unknown Error";
-                  document.getElementById("RANGEValue").style.color = "#8e0b0b";
+                  document.getElementById("signal").innerHTML = "Unknown Error";
+                  document.getElementById("RANGEValue").style.color = "#8e0b0b;";
             }
           }
-          if (response.Angle) {
-            document.getElementById("RANGEValue").innerHTML += response.Angle;
+          // If an angle field is present, display it.
+          if (response.hasOwnProperty('Angle')) {
+            document.getElementById("ANGLEValue").innerHTML = response.Angle;
+            document.getElementById("ANGLEValue").innerHTML += "&deg;";
           }        
-        
+
+          // Plot the history histogram if we got a valid response
           if (response.RangeStatus == 0) {
-            ctx = document.getElementById("plot").getContext("2d");
-            var maxX = Math.floor(ctx.canvas.width);
-            var maxY = Math.floor(ctx.canvas.height);
+            plot = document.getElementById("plot").getContext("2d");
+            var maxX = Math.floor(plot.canvas.width);
+            var maxY = Math.floor(plot.canvas.height);
             plotvalue = Math.floor(response.Distance / plotscale);
             plotpoint = maxY - plotvalue;
-            ctx = document.getElementById("plot").getContext("2d");
-            ctx.fillStyle = "#DDDDDD";
-            ctx.fillRect(plotline, plotpoint, 1, plotvalue);
+            plot.fillStyle = "#DDDDDD";
+            plot.fillRect(plotline, plotpoint, 1, plotvalue);
             plotline = plotline + 1;
             if (plotline > maxX) {
               plotline = 0;
             }
-            ctx.clearRect(plotline, 0, 1, maxX);
+            plot.clearRect(plotline, 0, 1, maxY);
           }
+
+          // Plot the scan if enabled and we have a valid response
+          if ((response.RangeStatus == 0) && haveLidar) {
+            scan = document.getElementById("scan").getContext("2d");
+              var ScanXYRadius = Math.floor(scan.canvas.width/2); // radius= 1/2 the plot width
+              var rad = response.Angle * Math.PI / 180;
+              var scanValue = Math.floor(response.Distance / plotscale);
+              var scanX = Math.floor(Math.sin(rad)*scanValue);
+              var scanY = Math.floor(Math.cos(rad)*scanValue);
+              scan.fillStyle = "#DDDDDD";
+              scan.fillRect(ScanXYRadius+scanX, ScanXYRadius-scanY, 3, 3);
+           }
         }
       }
       xhttp.open("GET", "/range", true);
       xhttp.send();
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
-        document.getElementById("signal").style.color = "#8e0b0b";
-        document.getElementById("RANGEValue").style.color = "#8e0b0b";
+        document.getElementById("signal").innerHTML = "Network Timeout";
       };
     }
     
     // Read and process the extended info, handle mode changes
-    var mode = "NONE";
+
+    var mode = "NONE";      // we dont know mode initially
+    var haveLidar = false;  // assume no lidar untill it is reported as present
+    
     function getInfo() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
-          document.getElementById("statusPanel").innerHTML = this.responseText;
-          if (response.Mode != mode) {
+          document.getElementById("statusText").innerHTML = this.responseText;
+          if (response.Mode != mode) {  // mode changes
             mode = response.Mode;
             setMode(response.Mode);
+          }
+          if ((response.HasServo == true) && !haveLidar) {  // lidar present but undetected?
+            haveLidar = true;
+            showLidar();
           }
         }
       }
@@ -309,41 +340,43 @@ const char MAIN_page[] PROGMEM = R"=====(
       document.getElementById("plotControl").style.display = "block";
     }
   
+    function showScan() {
+      document.getElementById("scan").style.display = "block";
+      document.getElementById("scanControl").style.display = "none";
+      document.getElementById("scanClear").style.display = "block";
+    }
+    
+    function hideScan() {
+      document.getElementById("scan").style.display = "none";
+      document.getElementById("scanControl").style.display = "block";
+      document.getElementById("scanClear").style.display = "none";
+    }
+  
     function showControlPanel() {
       document.getElementById("controlPanel").style.display = "block";
+      document.getElementById("statusPanel").style.display = "block";
       document.getElementById("showControl").style.display = "none";
     }
 
     function hideControlPanel() {
       document.getElementById("controlPanel").style.display = "none";
+      document.getElementById("statusPanel").style.display = "none";
       document.getElementById("showControl").style.display = "block";
     }
    
-    function toggleStatusPanel() {
-      var x = document.getElementById("statusPanel");
-      if (x.style.display === "none") {
-        x.style.display = "block";
-      } else {
-        x.style.display = "none";
-      }
-    }
-
-    // Updates page to show the default-hidden lidar controls
-    function enableLidar() {
+    // Updates page to show the lidar controls when present
+    function showLidar() {
       var x = document.getElementsByClassName("lidar");
       var i;
       for (i = 0; i < x.length; i++) {
-        x[i].style.display = block;
-      }
+        x[i].style.display = "block";
+        }
     }
 
     // Called when a mode change is detected; sets the graph etc.
     function setMode(mode) {
-      ctx = document.getElementById("plot").getContext("2d");
-      var maxX = Math.floor(ctx.canvas.width);
-      var maxY = Math.floor(ctx.canvas.height);
-      ctx.clearRect(0, 0, maxX, maxY);
-      plotline = 0;
+      clearPlot();
+      clearScan();
       switch (mode) {
         case "near":
           plotscale = 8;
@@ -361,6 +394,26 @@ const char MAIN_page[] PROGMEM = R"=====(
           plotscale = 100;
           document.getElementById("MODEValue").innerHTML = "Unknown";
       }
+    }
+
+    // Helper Functions for the canvas plots
+    function clearPlot() {
+      plot = document.getElementById("plot").getContext("2d");
+      var maxPlotX = Math.floor(plot.canvas.width);
+      var maxPlotY = Math.floor(plot.canvas.height);
+      plot.clearRect(0, 0, maxPlotX, maxPlotY);
+      plotline = 0;
+    }
+
+    function clearScan() {
+      scan = document.getElementById("scan").getContext("2d");
+      var maxScanX = Math.floor(scan.canvas.width);
+      var maxScanY = Math.floor(scan.canvas.height);
+      scan.clearRect(0, 0, maxScanX, maxScanY);
+      // Add a reference 'dot' at the scan center
+      var ScanXYRadius = Math.floor(scan.canvas.width/2); // radius= 1/2 the plot width
+      scan.fillStyle = "#000000";
+      scan.fillRect(ScanXYRadius-1,ScanXYRadius-1, 3, 3);
     }
 
   </script>
