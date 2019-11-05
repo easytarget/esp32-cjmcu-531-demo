@@ -2,7 +2,7 @@
 Designed (initially) for the VL53L1X (4 meter) sensor:
 https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html
 
-Using this in can be as easy as connecting to the 'VL53L0X-demo' wifi network (no password needed), and then browsing to '192.168.4.1' for the UI.
+Using this in can be as easy as connecting to the `VL53L0X-demo` wifi network (no password needed), and then browsing to `192.168.4.1` for the UI.
 
 ![The results](/docs/graph-panel.png)
 
@@ -34,6 +34,11 @@ Not currently used, but would be required for multi-sensor or low power sentinel
 
 5. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control)_
 5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line)_
+
+If you are using a H-bridge driven Servo the default pins (easily changable in code) are:
+
+7. _**D27**_ (GPIO27), _**D25**_ (GPIO25), _**D26**_ (GPIO26), _**D33**_ (GPIO23) on ESP32 should go to the respective 1,2,3,4, inputs on the H-Bridge driver.
+7. **5v** and **GND** on the ESP32 are used for the stepper power supply; this places a reasonable demand on the USB power supply. Lockups and disconnects associated with motor movement are undoubtedly caused by the USB supply dipping and causing brownouts, use a decent PSU and cable.
 
 #### Demo setup
 ![The Prototype](/docs/lidar-rig.jpg)
