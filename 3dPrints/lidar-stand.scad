@@ -7,7 +7,7 @@ $fn=90;
 
 fitting=!true;
 
-stand();
+//stand();
 
 mcuY = -40;
 drvY = 5;
@@ -86,7 +86,7 @@ module mount(pos=[0,0,0],rot=0) translate(pos) rotate([rot,0,0]) {
             cylinder(d=motshaft+0.3,h=7,center=true);
             cube([motshaft+1,motsflat,7],center=true);
         }
-        translate([0,13,3.5])
+        translate([0,23,3.5])
         cube([15,7,0.6],center=true);
     }
     hull () {
