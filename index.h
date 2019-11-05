@@ -2,6 +2,9 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
 
+<!-- Page served by ESP32 CJMCU-531 demo; see https://github.com/easytarget/esp32-cjmcu-531-demo/ 
+     Design/Coding by Owen; https://easytarget.org/ -->
+
 <!-- Begin with style -->
 <style>
   a{
@@ -36,7 +39,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     padding: 3px 6px ;
     text-align: left;
     display: inline-block;
-    margin: 3px 6px;
+    margin: 3px 4px;
     cursor: pointer;
     outline-style:none;
   }
@@ -83,7 +86,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!-- The page itself -->
 <body>
   <div class="card">
-    <h3 style="text-align: center;">ESP32/VL53L0X Demo
+    <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
     <hr> 
     <div id="signal" class="signal">Comms Timeout</div>
     <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">?</span>
@@ -97,57 +100,37 @@ const char MAIN_page[] PROGMEM = R"=====(
     <span class="lidar"><canvas class="canvases" id="scan" onclick="hideScan()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
-    <div class="expander" id="scanControl" onclick="showScan()">show scan</div>
-    <div class="expander" id="scanClear" onclick="clearScan()" style="font-size: 80%; display: none;">
+    <div class="expander" id="scanControl" onclick="showScan()"style="font-size: 110%; font-weight: bold;">show scan</div>
+    <div class="expander" id="scanClear" onclick="clearScan()" style="font-size: 90%; display: none;">
     clear scan</div></span>
     <canvas class="canvases" id="plot" onclick="hidePlot()" width=320 height=240>
     This is a Canvas Element, if it is not displayed then we apologize, your browser 
     is not compatible.</canvas>
-    <div class="expander" id="plotControl" onclick="showPlot()">show history</div>
+    <div class="expander" id="plotControl" onclick="showPlot()" style="font-size: 110%; font-weight: bold;">show history</div>
 
     <hr>
     <div style="text-align: left;">
-      Sensor&nbsp;::
-      <button class="button" onclick="httpGet('/on')"
-              title="Enable sensor">On</button>
-      |
-      <button class="button" onclick="httpGet('/off')"
+      Sensor&nbsp;::<button class="button" onclick="httpGet('/on')"
+              title="Enable sensor">On</button>|<button class="button" onclick="httpGet('/off')"
               title="Disable sensor">Off</button>
     </div>
     <div style="text-align: left;">
-      Mode&nbsp;::
-      <button class="button" onclick="httpGet('/near')" 
-              title="Near range (max 1.3m, fastest)">Near</button>
-      |
-      <button class="button" onclick="httpGet('/mid')" 
-              title="Mid Range (max 4m, fast but less accurate at range)">Mid</button>
-      |
-      <button class="button" onclick="httpGet('/far')" 
+      Mode&nbsp;::<button class="button" onclick="httpGet('/near')" 
+              title="Near range (max 1.3m, fastest)">Near</button>|<button class="button" onclick="httpGet('/mid')" 
+              title="Mid Range (max 4m, fast but less accurate at range)">Mid</button>|<button class="button" onclick="httpGet('/far')" 
               title="Far Range (max 4m, slower but more accurate over whole range)">Far</button>
     </div>
     <div style="text-align: left;" class="lidar">
-      Scan&nbsp;::
-      <button class="button" onclick="httpGet('/s-scan90');showScan()" 
-              title="scan 90 degrees around current direction">90&deg;</button>
-      |
-      <button class="button" onclick="httpGet('/s-scanfull');showScan()"
-              title="Scan 270 degrees">270&deg;</button>
-      |
-      <button class="button" onclick="httpGet('/s-scanstop')" 
-              title="Stop scanning">Stop</button>
-      |
-      <button class="button" onclick="httpGet('/s-scanback')" 
+      Scan&nbsp;::<button class="button" onclick="httpGet('/s-scan90');showScan()" 
+              title="scan 90 degrees around current direction">90&deg;</button>|<button class="button" onclick="httpGet('/s-scanfull');showScan()"
+              title="Scan 270 degrees">270&deg;</button>|<button class="button" onclick="httpGet('/s-scanstop')" 
+              title="Stop scanning">Stop</button>|<button class="button" onclick="httpGet('/s-scanback')" 
               title="Reverse scanning">Back</button>
     </div>
     <div style="text-align: left;" class="lidar">
-      Motion&nbsp;::
-      <button class="button" onclick="httpGet('/s-left')" 
-              title="Swing the sensor left">Left</button>
-      |
-      <button class="button" onclick="httpGet('/s-home')"
-              title="Go to the Home (zero) position and turn stepper off">Home</button>
-      |
-      <button class="button" onclick="httpGet('/s-right')" 
+      Motion&nbsp;::<button class="button" onclick="httpGet('/s-left')" 
+              title="Swing the sensor left">Left</button>|<button class="button" onclick="httpGet('/s-home')"
+              title="Go to the Home (zero) position and turn stepper off">Home</button>|<button class="button" onclick="httpGet('/s-right')" 
               title="Swing the sensor right">Right</button>
     </div>
     <div>
@@ -159,57 +142,40 @@ const char MAIN_page[] PROGMEM = R"=====(
           less control
         </h3>
         <div style="text-align: left;">
-          RegionOfInterest&nbsp;::
-          <button class="button" onclick="httpGet('/roiminus')" 
-             title="Make Region of Interest smaller">Smaller</button>
-          |
-          <button class="button" onclick="httpGet('/roiplus')" 
-             title="Make Region of Interest bigger">Bigger</button>
-        </div>
-        <div style="text-align: left;">
-          TimingBudget&nbsp;::
-          <button class="button" onclick="httpGet('/budgetminus')" 
-             title="Make Timing Budget smaller">Smaller</button>
-          |
-          <button class="button" onclick="httpGet('/budgetplus')" 
+          TimingBudget&nbsp;::<button class="button" onclick="httpGet('/budgetminus')" 
+             title="Make Timing Budget smaller">Smaller</button>|<button class="button" onclick="httpGet('/budgetplus')" 
              title="Make Timing Budget bigger">Bigger</button>
         </div>
         <div style="text-align: left;">
-          Interval&nbsp;::
-          <button class="button" onclick="httpGet('/intervalminus')" 
-             title="Make InterMeasurement period smaller">Smaller</button>
-          |
-          <button class="button" onclick="httpGet('/intervalplus')" 
+          Interval&nbsp;::<button class="button" onclick="httpGet('/intervalminus')" 
+             title="Make InterMeasurement period smaller">Smaller</button>|<button class="button" onclick="httpGet('/intervalplus')" 
              title="Make InterMeasurement period bigger">Bigger</button>
         </div>
-        <div style="text-align: left;" class="lidar">
-          Step Delta&nbsp;::
-          <button class="button" onclick="httpGet('/s-deltaminus')" 
-             title="Make step delta angle smaller">Smaller</button>
-          |
-          <button class="button" onclick="httpGet('/s-deltaplus')" 
-             title="Make step delta angle bigger">Bigger</button>
+        <div style="text-align: left;">
+          ROI&nbsp;::<button class="button" onclick="httpGet('/roiminus')" 
+             title="Make Region of Interest smaller">Smaller</button>|<button class="button" onclick="httpGet('/roiplus')" 
+             title="Make Region of Interest bigger">Bigger</button>
         </div>
         <div style="text-align: left;" class="lidar">
-          Scan Step&nbsp;::
-          <button class="button" onclick="httpGet('/s-scanminus')" 
-             title="Make scan delta angle smaller">Smaller</button>
-          |
-          <button class="button" onclick="httpGet('/s-scanplus')" 
-             title="Make scan delta angle bigger">Bigger</button>
+          Scan Step&nbsp;::<button class="button" onclick="httpGet('/s-scanminus')" 
+             title="Make scan steps smaller">Smaller</button>|<button class="button" onclick="httpGet('/s-scanplus')" 
+             title="Make scan steps bigger">Bigger</button>
         </div>
         <div style="text-align: left;" class="lidar">
-          Step Control&nbsp;::
-          <button class="button" onclick="httpGet('/s-off')" 
-             title="Power Down the stepper">Off</button>
-          |
+          Manual Step&nbsp;::<button class="button" onclick="httpGet('/s-manualminus')" 
+             title="Make manual steps smaller">Smaller</button>|<button class="button" onclick="httpGet('/s-manualplus')" 
+             title="Make manual steps bigger">Bigger</button>
+        </div>
+        <div style="text-align: left;" class="lidar">
+          Step Control&nbsp;::<button class="button" onclick="httpGet('/s-off')" 
+             title="Power Down the stepper">Off</button>|
           <button class="button" onclick="httpGet('/s-zero')" 
              title="Declare new Zero position">Zero</button>
         </div>
       </span>
     </div>
     <span id="statusPanel" class="expander" style="display: none; text-align: left;">
-    <pre style="font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
+    <pre style="font-size: 110%; font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
     Connecting..</pre></span>
     <div style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
     title="Project home repo">GitHub</a>::</div>
@@ -227,7 +193,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     // Create the recurring interval task to refresh the info data 
     setInterval(function() {
       getInfo();
-    }, 500); // interval in ms.
+    }, 333); // interval in ms.
 
     // make a simple http request, return result, used to trigger actions from buttons
     function httpGet(theUrl)
@@ -319,15 +285,15 @@ const char MAIN_page[] PROGMEM = R"=====(
 
           // Plot the scan if enabled and we have a valid response
           if ((response.RangeStatus == 0) && haveLidar) {
-           scan = document.getElementById("scan").getContext("2d");
-            var maxScanX = Math.floor(scan.canvas.width);
-            var maxScanY = Math.floor(scan.canvas.height);
-            scanvalue = Math.floor(response.Distance / plotscale);
-            scanpoint = maxScanY - scanvalue;
-            scanline = (response.Angle + 140) * (maxScanX / 281);
-            scan.fillStyle = "#DDDDDD";
-            scan.fillRect(scanline-1, scanpoint-1, 3, 3);            
-          }
+            scan = document.getElementById("scan").getContext("2d");
+              var ScanXYRadius = Math.floor(scan.canvas.width/2); // radius= 1/2 the plot width
+              var rad = response.Angle * Math.PI / 180;
+              var scanValue = Math.floor(response.Distance / plotscale);
+              var scanX = Math.floor(Math.sin(rad)*scanValue);
+              var scanY = Math.floor(Math.cos(rad)*scanValue);
+              scan.fillStyle = "#DDDDDD";
+              scan.fillRect(ScanXYRadius+scanX, ScanXYRadius-scanY, 3, 3);
+           }
         }
       }
       xhttp.open("GET", "/range", true);
@@ -335,7 +301,6 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
         document.getElementById("signal").innerHTML = "Network Timeout";
-        //document.getElementById("RANGEValue").style.color = "#8e0b0b";
       };
     }
     
@@ -399,7 +364,7 @@ const char MAIN_page[] PROGMEM = R"=====(
       document.getElementById("showControl").style.display = "block";
     }
    
-    // Updates page to show the default-hidden lidar controls
+    // Updates page to show the lidar controls when present
     function showLidar() {
       var x = document.getElementsByClassName("lidar");
       var i;
@@ -445,6 +410,10 @@ const char MAIN_page[] PROGMEM = R"=====(
       var maxScanX = Math.floor(scan.canvas.width);
       var maxScanY = Math.floor(scan.canvas.height);
       scan.clearRect(0, 0, maxScanX, maxScanY);
+      // Add a reference 'dot' at the scan center
+      var ScanXYRadius = Math.floor(scan.canvas.width/2); // radius= 1/2 the plot width
+      scan.fillStyle = "#000000";
+      scan.fillRect(ScanXYRadius-1,ScanXYRadius-1, 3, 3);
     }
 
   </script>

@@ -1,7 +1,12 @@
 /*
- * ESP32 AJAX rangefinder
- * Updates and Gets data from webpage without page refresh
- * Based on examples from Sparkfun and https://circuits4you.com
+ * ESP32 AJAX Rangefinder and Lidar demo
+ * 
+ * Owen Carter (https://easytarget.org/)
+ * 
+ * Project home @
+ * https://github.com/easytarget/esp32-cjmcu-531-demo/
+ * 
+ * Originally based on examples from Sparkfun and https://circuits4you.com
  */
  
 // 3rd party libraries
@@ -10,27 +15,24 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
+
+// Currently using the SparkFun library for the sensor: 
+// https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 #include <SparkFun_VL53L1X.h>
 
-// Uncomment to enable servo (lidar)
+// Comment out to disable servo (lidar)
 #define LIDAR
 
-// Embedded web page contents
+// Embedded web page (stored in progmem)
 #include "index.h"    
 
-// Globals for sensor settings
-int range;         // Latest reading
-int roi;           // region of Intrest setting
-int budget;        // reading time budget in ms. (bigger==more accuracy)
-int interval;      // how often to start readings in ms
-
-// Distance history for rolling average (UNUSED AT PRESENT)
-//#define HISTORY_SIZE 10
-//int history[HISTORY_SIZE];
-//byte historySpot;
+// Sensor setup
+int range;             // Latest reading
+int budgetIndex = 4 ;  // reading time budgets in ms. (bigger==more accurate but slower)
+int budgetValue[7] = {15,20,33,50,100,200,500}; // default 100ms
 
 // Settings
-bool enabled = true; // main enabled/disabled thing
+bool enabled = true; // main enabled/disabled control
 String mode = "mid"; // range mode
 
 // Wifi
@@ -98,7 +100,7 @@ SFEVL53L1X distanceSensor;
   Stepper lidarStepper(STEPS_PER_REV, stepPin[0], stepPin[1], stepPin[2], stepPin[3]);
 
   int currentStep = 0;                   // Assume servo is at '0' to start.  
-  int deltaStep = (STEPS_PER_REV/24);    // close to 15 degrees initially
+  int manualStep = (STEPS_PER_REV/24);    // close to 15 degrees initially
   bool stepperPwr = 0;                   // stepper power status
   bool stepState[4] = {LOW,LOW,LOW,LOW}; // pin state during power off
   int scanStep = (STEPS_PER_REV/120);    // steps per scan reading, defaults to ~3 degrees
@@ -207,8 +209,8 @@ void setup(void){
     server.on("/s-right", handleStepperRight);        // Go right
     server.on("/s-zero", handleStepperZero);          // Set current position as zero
     server.on("/s-off", handleStepperOff);            // power off
-    server.on("/s-deltaplus", handleDeltaStepPlus);   // increase step delta
-    server.on("/s-deltaminus", handleDeltaStepMinus); // decrease step delta
+    server.on("/s-manualplus", handleManualStepPlus);   // increase manual delta
+    server.on("/s-manualminus", handleManualStepMinus); // decrease manual delta
     server.on("/s-scanplus", handleScanStepPlus);     // increase scan delta
     server.on("/s-scanminus", handleScanStepMinus);   // decrease scan delta
   #endif
@@ -220,25 +222,15 @@ void setup(void){
   // Start sensor
   Wire.begin();
   delay(250);
-  if (distanceSensor.begin() == true)
+  if (distanceSensor.begin() == 0)
     Serial.println("Sensor online!");
-   
-
-  // read sensor initial values
-  roi = distanceSensor.getROIX();
-  budget = distanceSensor.getTimingBudgetInMs();
-  
-  // Clean history..
-  //for (int x = 0 ; x < HISTORY_SIZE ; x++)
-  //  history[x] = 0;
 
   // Setup complete, turn LED off
   digitalWrite(LED, LOW);   // turn the LED off now init is successful
 
-  // sensor default mode, and start it if enabled by default
+  // Set the sensor to it's default mode, and start it if needed
   handleMidMode();
   if (enabled == true) distanceSensor.startRanging();
-
 }
 
 //=========================================
@@ -246,16 +238,15 @@ void setup(void){
 //=========================================
 
 // Mainpage 
-
 void handleRoot() {
   digitalWrite(LED, HIGH);          // blink the LED
-  String s = MAIN_page;             //Read HTML from the MAIN_page progmem
+  String s = MAIN_page;             //Read HTML from progmem
   server.send(200, "text/html", s); //Send web page
   digitalWrite(LED, LOW);
   Serial.print("Sent the main page to: ");
   Serial.println(server.client().remoteIP().toString());
   delay(BLINK);
-  digitalWrite(LED, HIGH);   // blink again
+  digitalWrite(LED, HIGH);          // blink again
   delay(BLINK);
   digitalWrite(LED, LOW);
 }
@@ -282,11 +273,11 @@ void handleNearMode()
   server.send(200, "text/plain", "near mode");
   usernotify("Near Mode");
   mode = "near"; 
-  budget = 20;
-  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
+  budgetIndex = 1;
   distanceSensor.setDistanceModeShort();
-  distanceSensor.setTimingBudgetInMs(budget);
-  distanceSensor.setIntermeasurementPeriod(interval);
+  distanceSensor.setTimingBudgetInMs(budgetValue[budgetIndex]);
+  // from sensor datasheet; minimum intermeasurement is TimingBudget+4ms
+  distanceSensor.setIntermeasurementPeriod(budgetValue[budgetIndex] + 10);
 }
 
 void handleMidMode()
@@ -294,11 +285,11 @@ void handleMidMode()
   server.send(200, "text/plain", "mid mode");
   usernotify("Mid Mode");
   mode = "mid"; 
-  budget = 33;
-  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
+  budgetIndex = 2;
   distanceSensor.setDistanceModeLong();
-  distanceSensor.setTimingBudgetInMs(budget);
-  distanceSensor.setIntermeasurementPeriod(interval);
+  distanceSensor.setTimingBudgetInMs(budgetValue[budgetIndex]);
+  // from sensor datasheet; minimum intermeasurement is TimingBudget+4ms
+  distanceSensor.setIntermeasurementPeriod(budgetValue[budgetIndex] + 10);
 }
 
 void handleFarMode()
@@ -306,68 +297,68 @@ void handleFarMode()
   server.send(200, "text/plain", "far mode");
   usernotify("Far Mode");
   mode = "far"; 
-  budget = 50;
-  interval = budget+4; // from sensor datasheet; actual minimum is TimingBudget+4ms
+  budgetIndex = 4;
   distanceSensor.setDistanceModeLong();
-  distanceSensor.setTimingBudgetInMs(budget);
-  distanceSensor.setIntermeasurementPeriod(interval);
+  distanceSensor.setTimingBudgetInMs(budgetValue[budgetIndex]);
+  // from sensor datasheet; minimum intermeasurement is TimingBudget+4ms
+  distanceSensor.setIntermeasurementPeriod(budgetValue[budgetIndex] + 10); 
 }
 
 void handleRoiPlus()
 {
   server.send(200, "text/plain", "roi plus");
-  usernotify("ROI plus");
-  int newroi = roi + 1;
-  if (newroi > 16) roi = 16; else roi = newroi;
-  distanceSensor.setROI(roi, roi);
+  usernotify("ROI plus"); 
+  int newroi = distanceSensor.getROIX() + 1;
+  if (newroi > 16) newroi = 16;
+  distanceSensor.setROI(newroi, newroi);
 }
 
 void handleRoiMinus()
 {
   server.send(200, "text/plain", "roi minus");
   usernotify("ROI Minus");
-  int newroi = roi - 1;
-  if (newroi < 4) roi = 4; else roi = newroi;
-  distanceSensor.setROI(roi, roi);
+  int newroi = distanceSensor.getROIX() - 1;
+  if (newroi < 4) newroi = 4;
+  distanceSensor.setROI(newroi, newroi);
 }
 
 void handleBudgetPlus()
 {
   server.send(200, "text/plain", "budget plus");
   usernotify("Budget Plus");
-  int newbudget = budget + 10; // replace to step values from array
-  if (newbudget > 500) budget = 500; else budget = newbudget;
-  if (interval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
-  distanceSensor.setTimingBudgetInMs(budget);
-  distanceSensor.setIntermeasurementPeriod(interval);
+  int newIndex = budgetIndex + 1;
+  if (newIndex > 6) return; else budgetIndex = newIndex;
+  distanceSensor.setTimingBudgetInMs(budgetValue[budgetIndex]);
+  if (distanceSensor.getIntermeasurementPeriod() < (budgetValue[newIndex] + 4)) // TimingBudget+4ms minimum
+    distanceSensor.setIntermeasurementPeriod(budgetValue[newIndex] + 10);
 }
 
 void handleBudgetMinus()
 {
   server.send(200, "text/plain", "budget minus");
   usernotify("Budget Minus");
-  int newbudget = budget - 10;// replace to step values from array
-  if (newbudget < 20) budget = 20; else budget = newbudget;
-  distanceSensor.setTimingBudgetInMs(budget);
+  int newIndex = budgetIndex - 1;
+  if (newIndex < 0) return; else budgetIndex = newIndex;
+  distanceSensor.setTimingBudgetInMs(budgetValue[budgetIndex]);
 }
 
 void handleIntervalPlus()
 {
   server.send(200, "text/plain", "interval plus");
   usernotify("Interval Plus");
-  int newinterval = interval + 10;
-  if (newinterval > 1500) interval = 1500; else interval = newinterval;
-  distanceSensor.setIntermeasurementPeriod(interval);
+  int newinterval = distanceSensor.getIntermeasurementPeriod() + 20;
+  if (newinterval > 1500) return;
+  distanceSensor.setIntermeasurementPeriod(newinterval);
 }
 
 void handleIntervalMinus()
 {
   server.send(200, "text/plain", "interval minus");
   usernotify("Interval Minus");
-  int newinterval = interval - 10;
-  if (newinterval < (budget+4)) interval = budget + 4; // from sensor datasheet; actual minimum is TimingBudget+4ms
-  else interval = newinterval;
-  distanceSensor.setIntermeasurementPeriod(interval);
+  int newinterval = distanceSensor.getIntermeasurementPeriod() - 20;
+  if (newinterval < (budgetValue[budgetIndex] + 4)) // TimingBudget+4ms minimum
+    newinterval = budgetValue[budgetIndex] + 10; 
+  distanceSensor.setIntermeasurementPeriod(newinterval);
 }
 
 #ifdef LIDAR
@@ -410,8 +401,16 @@ void handleIntervalMinus()
   {
     server.send(200, "text/plain", "stepper left");
     usernotify("Stepper Left");
-    int newStep = currentStep - deltaStep; 
+    int newStep = currentStep - manualStep; 
     if (newStep < STEPS_MIN) stepTo(STEPS_MIN); else stepTo(newStep);
+  }
+  
+  void handleStepperRight()
+  {
+    server.send(200, "text/plain", "stepper right");
+    usernotify("Stepper Right");
+    int newStep = currentStep + manualStep; 
+    if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
   }
   
   void handleStepperHome()
@@ -420,14 +419,6 @@ void handleIntervalMinus()
     usernotify("Stepper Home");
     if (currentStep != 0) stepTo(0);
     stepperOff();
-  }
-  
-  void handleStepperRight()
-  {
-    server.send(200, "text/plain", "stepper right");
-    usernotify("Stepper Right");
-    int newStep = currentStep + deltaStep; 
-    if (newStep > STEPS_MAX) stepTo(STEPS_MAX) ; else stepTo(newStep);
   }
   
   void handleStepperZero()
@@ -444,26 +435,26 @@ void handleIntervalMinus()
     stepperOff();
   }
 
-  void handleDeltaStepPlus()
+  void handleManualStepPlus()
   {
-    server.send(200, "text/plain", "stepper delta plus");
-    usernotify("Stepper Delta Plus");
-    int newdelta = deltaStep + 5;
-    if (newdelta < 285) deltaStep = newdelta;
+    server.send(200, "text/plain", "stepper manual delta plus");
+    usernotify("Stepper Manual Delta Plus");
+    int newdelta = manualStep + 10;
+    if (newdelta < 285) manualStep = newdelta;
   }
   
-  void handleDeltaStepMinus()
+  void handleManualStepMinus()
   {
-    server.send(200, "text/plain", "stepper delta minus");
-    usernotify("Stepper Delta Minus");
-    int newdelta = deltaStep - 5;
-    if (newdelta >= 0) deltaStep = newdelta;
+    server.send(200, "text/plain", "stepper manual delta minus");
+    usernotify("Stepper Manual Delta Minus");
+    int newdelta = manualStep - 10;
+    if (newdelta >= 1) manualStep = newdelta;
   }
   void handleScanStepPlus()
   {
     int newdelta;
-    server.send(200, "text/plain", "stepper scan steps plus");
-    usernotify("Stepper Scan Steps Plus");
+    server.send(200, "text/plain", "stepper scan delta plus");
+    usernotify("Stepper Scan Delta Plus");
     if (scanStep < 9) newdelta = scanStep + 1; else newdelta = scanStep + 3;
     if (newdelta < 120) scanStep = newdelta;
   }
@@ -471,8 +462,8 @@ void handleIntervalMinus()
   void handleScanStepMinus()
   {
     int newdelta;
-    server.send(200, "text/plain", "stepper scan steps minus");
-    usernotify("Stepper Scan Steps Minus");
+    server.send(200, "text/plain", "stepper scan delta minus");
+    usernotify("Stepper Scan Delta Minus");
     if (scanStep < 9) newdelta = scanStep - 1; else newdelta = scanStep - 3;
     if (newdelta >= 1) scanStep = newdelta;
   }
@@ -530,6 +521,8 @@ void handleInfo()
   infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
   infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
   infostamp["DistanceMode"] = distanceSensor.getDistanceMode();
+  infostamp["ROIX"] = distanceSensor.getROIX();
+  infostamp["ROIY"] = distanceSensor.getROIY();
   infostamp["SignalPerSpad"] = distanceSensor.getSignalPerSpad();
   infostamp["SpadNb"] = distanceSensor.getSpadNb();
   infostamp["AmbientRate"] = distanceSensor.getAmbientRate();
@@ -537,16 +530,11 @@ void handleInfo()
   infostamp["SignalThreshold"] = distanceSensor.getSignalThreshold();
   infostamp["SigmaThreshold"] = distanceSensor.getSigmaThreshold();
   infostamp["XTalk"] = distanceSensor.getXTalk();
-  infostamp["ThresholdWindow"] = distanceSensor.getDistanceThresholdWindow();
-  infostamp["DistanceThresholdLow"] = distanceSensor.getDistanceThresholdLow();
-  infostamp["DistanceThresholdHigh"] = distanceSensor.getDistanceThresholdHigh();
-  infostamp["ROIX"] = distanceSensor.getROIX();
-  infostamp["ROIY"] = distanceSensor.getROIY();
   #ifdef LIDAR 
     infostamp["HasServo"] = true;
     infostamp["Step"] = currentStep;
-    infostamp["DeltaStep"] = deltaStep;
     infostamp["ScanStep"] = scanStep;
+    infostamp["ManualStep"] = manualStep;
   #else
     infostamp["HasServo"] = false;
   #endif
@@ -572,7 +560,7 @@ void usernotify(char message[]) {
 #ifdef LIDAR
   // Go to a target position and set that as current
   void stepTo(int target) {
-     if ( currentStep != target ) { // only move if needed)
+     if ( currentStep != target ) {   // only move if needed
       if ( !stepperPwr ) stepperOn(); // wake stepper as needed
       #ifdef SERVO_INVERT
         lidarStepper.step(-(target-currentStep));
@@ -583,7 +571,7 @@ void usernotify(char message[]) {
      }
   }
 
-  // Disable the stepper, record pin state
+  // Disable the stepper, record pin state so we can recover exact position
 void stepperOff() {
   delay(40); // wait for motor to settle, it drifts otherwise
   for (byte p=0; p < 4; p++) 
@@ -613,18 +601,20 @@ void stepperOn() {
 void loop(void){
   server.handleClient();
   #ifdef BUTTON
-    // Deal with the (optional) active-low 'boot' button on the board.
-    if (digitalRead(BUTTON) == LOW ) {
-      delay(50); // crude debounce
-      if (digitalRead(BUTTON) == LOW) {
-        /// home and disable stepper
-        if (currentStep != 0) stepTo(0);
-        stepperOff();
-        Serial.println("Homed via button");
-        // wait for button release
-        while(digitalRead(BUTTON) == LOW) delay(10);
+    #ifdef LIDAR
+      // Deal with the (optional) active-low 'boot' button on the board.
+      if (digitalRead(BUTTON) == LOW ) {
+        delay(50); // crude debounce
+        if (digitalRead(BUTTON) == LOW) {
+          // home and disable stepper
+          stepTo(0);
+          stepperOff();
+          Serial.println("Homed via button");
+          // wait for button release
+          while(digitalRead(BUTTON) == LOW) delay(10);
+        }
       }
-    }
+    #endif
   #endif
   delay(1);
 }
