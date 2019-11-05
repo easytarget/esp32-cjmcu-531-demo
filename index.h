@@ -89,7 +89,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
     <hr> 
     <div id="signal" class="signal">Comms Timeout</div>
-    <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">?</span>
+    <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">connecting..</span>
       <span style="float: left; font-size: 160%;font-weight: bold;">Range:</span></div><hr>
     <div><span id="MODEValue"style="float: right; font-weight: bold;">unknown</span>&nbsp;
       <span style="float: left;font-weight: bold;">Mode:</span></div>
@@ -207,19 +207,23 @@ const char MAIN_page[] PROGMEM = R"=====(
     // Loop to get, process and display value readings
     var plotline = 0;
     var plotscale = 20;
+    var timeout = 0;
     
     function getValues() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
-          document.getElementById("signal").innerHTML = "&nbsp;";
+          document.getElementById("signal").innerHTML = "&nbsp;"; //some content is needed to prevent element collapsing
           if (response.RangeStatus < 0) {
+            timeout = 0; // dont timeout while disabled
             document.getElementById("RANGEValue").innerHTML = "<span style=\"font-size: 80%;\">Disabled</span>";
             document.getElementById("RANGEValue").style.color = "#555";
           } else {
+            timeout++; // always increment the timeout, it will only reset when we have a valid range
             switch (response.RangeStatus) {
                 case 0:
+                  timeout = 0; // valid range result, reset timeout counter
                   document.getElementById("RANGEValue").innerHTML = response.Distance;
                   document.getElementById("RANGEValue").innerHTML += "<span style=\"font-size: 66%;\">mm</span>";
                   document.getElementById("RANGEValue").style.color = "#555";
@@ -260,6 +264,8 @@ const char MAIN_page[] PROGMEM = R"=====(
                   document.getElementById("signal").innerHTML = "Unknown Error";
                   document.getElementById("RANGEValue").style.color = "#8e0b0b;";
             }
+            // if timeout reached, clear the range value.
+            if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
           }
           // If an angle field is present, display it.
           if (response.hasOwnProperty('Angle')) {
@@ -301,6 +307,9 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
         document.getElementById("signal").innerHTML = "Network Timeout";
+        timeout++; // increment timeout counter
+        // if timeout reached, clear the range value
+        if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
       };
     }
     
