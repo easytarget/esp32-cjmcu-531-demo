@@ -17,9 +17,7 @@ The following libraries are not installed as standard in the Arduino IDE but are
 * If you get an 'error: WebServer.h: No such file or directory' when compiling; make sure you have set your board type to 'ESP32Dev module' ;-)
 
 # Sensor Libraries
-Currently I use the Sparkfun library; but there is also one from Pololu:
-
-https://github.com/pololu/vl53l1x-arduino :: https://www.pololu.com/product/3415/resources
+Currently I use the Sparkfun library; but there is also one from Pololu: https://github.com/pololu/vl53l1x-arduino & https://www.pololu.com/product/3415/resources
 
 Both of these are 'light' libs designed for ATMega arduinos (eg limited RAM, etc). The Official ST lib is larger, but more complete and (arguably) better supported. It is also somewhat crankily documented, and requires a sign-up at stmicro .com to access.
 
@@ -32,10 +30,10 @@ See: https://www.st.com/en/ecosystems/x-cube-53l1a1.html#overview
 1. **D21** (GPIO21, I2C SDA) on ESP32 goes to **SDA** on CMJU-531
 1. **D22** (GPIO22, I2C SCL) on ESP32 goes to **SCL** on CMJU-531
 
-Not currently used:
+Not currently used, but would be required for multi-sensor or low power sentinel use.
 
-5. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control, not currently used)_
-5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line, not currently used)_
+5. _**D5** (GPIO5) on ESP32 goes to **XSHUT** on CMJU-531 (shutdown control)_
+5. _**D18** (GPIO18) on ESP32 goes to **GPIO1** on CMJU-531 (interrupt line)_
 
 #### Demo setup
 ![The Prototype](/docs/lidar-rig.jpg)
@@ -43,13 +41,15 @@ Not currently used:
 
 #### Plans
 https://github.com/easytarget/esp32-cjmcu-531-demo/issues
-* Add a servo (== lidar); add interrupt-driven motion control loop with homing, canned movements (and accelleration control?).
+* Move to the Official ST micro libs
 * SMP: handle sensor+servo on different core than the web server.
 * stop using GET requests and move to a streaming protocol.
 
 #### Issues
 * I have noticed the CMJU-531 I2C comms seem to lock up occasionally and needs a full power cycle to resume. This has only happened when I'm rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
 
-#### Base
-Mounts the sensor at a slight angle to avoid rangefinding the edge of the table.
+#### Base/Stand/Bracket
+I have model files for my development board (Sparkfun NodeMCU) and a paramatised SCAD file that can accomodate other MCU and Stepper driver board sizes bu adjusting the relevant settings.
+
+Two different sensor mounts are provided; the v2(taller) one also mounts the sensor at a slight angle to avoid rangefinding the edge of the table.
 ![The results](/docs/lidar-stand.png)
