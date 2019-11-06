@@ -6,18 +6,23 @@ https://www.st.com/en/imaging-and-photonics-solutions/vl53l1x.html
 
 Using this in can be as easy as connecting to the `VL53L1X-demo` wifi network (no password needed), and then browsing to `192.168.4.1` for the UI. Other WiFi settings can be used of course, see comments.
 
-![The results](/docs/graph-panel.png)
+![The results](/docs/kitchen-scan.png)
 
 The goal of this project is to prove the suitability of this sensor for a small-scale LIDAR scanner to be used in domestic automation; robot vaccum cleaners, security robots, monitoring systems and, in my case, a K9 'companion' robot I am working on as a long-term plan.
+
 The VL53L1X is just one of a range of similar Time-Of-Flight sensors from ST Micro. This sketch should be easily adaptable for them all, and other manufacturers have their own sensors which may also be suitable.
+
+I have been pleasently surprised that the results are better than I expected; the scan above is of my Kitchen; here is what it looks like in reality, the sensor is the little black dot in the scan, and the little red light in the photo.
+
+![The Source](/docs/kitchen-reality.jpg)
 
 ### Requirements:
 #### Hardware:`
 * ESP32 DEV module connected to a suitable sensor module; any ESP 32 module should be suitable, but you may need to adapt pinouts.
 * ESP development libs installed in a viable development environment: see https://github.com/espressif/arduino-esp32 
-*  For the Arduino IDE the instructions are at  https://github.com/espressif/arduino-esp32/blob/master/docs/arduino-ide/boards_manager.mdi 
+ * For the Arduino IDE the instructions are at  https://github.com/espressif/arduino-esp32/blob/master/docs/arduino-ide/boards_manager.mdi 
 * I use the CJMCU-531 sensor carrier, these are freely available online from AliExpress and the like. There are other VL53L1 carrier modules and boards available, all should work with this.
-* For the LIDAR scan mechanism I use a 5V stepper motor with gearbox, plus the H-Bridge control board supplied with it. These are very common and can be found on AliExpress, Ebay, hobby electronics stores etc. for a couple of Euros.
+* For the LIDAR scan mechanism I have a 5V stepper motor with gearbox, plus the H-Bridge control board supplied with it. These are very common and can be found on AliExpress, Ebay, hobby electronics stores etc. for a couple of Euros.
 
 #### Software:
 The following libraries are not installed as standard in the Arduino IDE but are searchable and installable from within the library manager.
@@ -52,6 +57,7 @@ If you are using a H-bridge driven Servo the default pins (easily changable in c
 ### Demo setup
 The WebUI for the demo is optimised for mobile phone displays, I run the unit in AP mode and connect from my Mobile. This allows me to demo to others easily too. 
 ![The Prototype](/docs/lidar-rig.jpg)
+
 ![The results](/docs/status-panel.png)
 
 ### Future Plans
@@ -61,12 +67,18 @@ https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 * stop using GET requests and move to a streaming protocol.
 
 ### Issues
-The scanning action is driven by successful sending of the data to the web client. Ti is affected by network timeouts, packet drops and delays, these will make the scan action intermittent and somewhat laggy.. This would be resolved by implementing the data stream/smp plans above.
+The scanning action is driven by successful sending of the data to the web client. It is affected by network timeouts, packet drops and delays, these will make the scan action intermittent and somewhat laggy.. This would be resolved by implementing the data stream/smp plans above.
 
-I have noticed the CMJU-531 I2C comms seem to lock up infrequently, and needed a full power cycle to resume. This has only happened when I'm ireflashing, rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
+I have noticed the CMJU-531 I2C comms seem to lock up infrequently, and needed a full power cycle to resume. This has only happened when I'm reflashing, rebooting and developing heavily; it seems stable when left in operation and not being 'messed' with. 
 
 ### Base/Stand/Bracket
-I have iincluded model files I used for my development board (Sparkfun NodeMCU) and a paramatised SCAD file that can accomodate other MCU and Stepper driver board sizes by adjusting the relevant settings.
+I have included model files I used for my development board (JoyIT NodeMCU) and a paramatised SCAD file that can accomodate other MCU and Stepper driver board sizes by adjusting the relevant settings.
 
-Two different sensor mounts are provided; the v2(taller) one also mounts the sensor at a slight angle to avoid rangefinding the edge of the table, an Issue I found in testing ;-)
+Two different sensor mounts are provided; the v2(taller) one also mounts the sensor at a slight angle to avoid rangefinding the edge of the table, I have found that for best results I need to stand the unit on a box or vase.
 ![The results](/docs/lidar-stand.png)
+
+### EndGoal:
+Use a ESP32-CAM instead of the dev board, stream video, take pictures, record ranges all in one.
+
+Then link that via Serial and level converters to a ATMega328 based robot chassis I already have; and go for a WiFi drive.
+![The results](/docs/robot.jpg)
