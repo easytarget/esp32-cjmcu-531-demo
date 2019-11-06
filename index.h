@@ -77,7 +77,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 
 <!-- Top -->
 <head>
-  <title>ESP32/VL53L0X display and control demo</title>
+  <title>ESP32/VL53L1X display and control demo</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=380, initial-scale=1" />
   <meta http-equiv="Cache-control" content="no-cache">
@@ -86,7 +86,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!-- The page itself -->
 <body>
   <div class="card">
-    <h3 style="text-align: center;">ESP32/VL53L0X Demo</h3>
+    <h3 style="text-align: center;">ESP32/VL53L1X Demo</h3>
     <hr> 
     <div id="signal" class="signal">Comms Timeout</div>
     <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">connecting..</span>
@@ -271,6 +271,7 @@ const char MAIN_page[] PROGMEM = R"=====(
           if (response.hasOwnProperty('Angle')) {
             document.getElementById("ANGLEValue").innerHTML = response.Angle;
             document.getElementById("ANGLEValue").innerHTML += "&deg;";
+            if (response.ScanControl != 0) document.getElementById("ANGLEValue").innerHTML += " (scanning)";
           }
 
           // Detect and respond to mode changes
@@ -374,11 +375,11 @@ const char MAIN_page[] PROGMEM = R"=====(
       clearScan();
       switch (mode) {
         case "near":
-          plotscale = 8;
+          plotscale = 5;
           document.getElementById("MODEValue").innerHTML = "near (1.3m)";
           break;
         case "mid":
-          plotscale = 16;
+          plotscale = 12;
           document.getElementById("MODEValue").innerHTML = "mid (2.6m)";
           break;
         case "far":
@@ -386,7 +387,7 @@ const char MAIN_page[] PROGMEM = R"=====(
           document.getElementById("MODEValue").innerHTML = "far (4m)";
           break;
         default:
-          plotscale = 100;
+          plotscale = 16;
           document.getElementById("MODEValue").innerHTML = "Unknown";
       }
     }

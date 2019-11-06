@@ -20,18 +20,18 @@
 // https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 #include <SparkFun_VL53L1X.h>
 
-// Comment out to disable servo (lidar)
+// Comment out to disable servo (lidar) functionality and UI
 #define LIDAR
 
-// Embedded web page (stored in progmem)
+// Embedded web page kept in a header file (& stored in progmem)
 #include "index.h"    
 
 // Sensor setup; see:
 // https://learn.sparkfun.com/tutorials/qwiic-distance-sensor-vl53l1x-hookup-guide#library-overview
 int range;                 // Latest reading
-int budgetIndex = 4 ;      // reading time budgets in ms. (bigger==more accurate but slower)
-int budgetValue[7] = {15,20,33,50,100,200,500}; // default 100ms
-byte opticalCenter = 199; 
+int budgetIndex = 4 ;      // time budget default 100ms (bigger==more accurate but slower)
+int budgetValue[7] = {15,20,33,50,100,200,500}; // // time budget steps in ms.
+byte opticalCenter = 199;  // Defines the centre of the sensor, required when setting ROI
 
 // Settings
 bool enabled = true; // main enabled/disabled control
@@ -47,7 +47,7 @@ String mode = "mid"; // range mode
   #define ACCESSPOINT
   #define ACCESSPOINTIP 192,168,4,1
   #define ACCESSPOINTMASK 255,255,255,1
-  const char* ssid = "VL53L0X-demo";
+  const char* ssid = "VL53L1X-demo";
   const char* password = ""; // no password == very insecure, but very easy to demo
 #endif
 
@@ -74,8 +74,18 @@ SFEVL53L1X distanceSensor;
 // Lidar Settings
 // setup below assumes a H-bridge stepper driver for a small (5v Unipolar) motor
 // Changes would be needed for a stepstick driver and a 'better' stepper, or a servo.
+
 #ifdef LIDAR
   #include <Stepper.h>
+
+  /* Wiring:
+   *  Pins D27,D25,D26,D33 (aka GPIO27,25,26,33) go to the 
+   *  four inut pins of a H-Bridge stepper driver.
+   *  No zero or homing sensor is supported, the motors 'zero' point
+   *  will initially be set to its power on position.
+   *  GPIO0 (aka the 'boot' button on the Dev board) is used for
+   *  a 'home and de-power' manual control.
+   */
   
   // Pins, edit this if not using suggested wiring
   byte stepPin[4] = {27,25,26,33};
@@ -112,6 +122,12 @@ SFEVL53L1X distanceSensor;
 #endif
 
 // Other
+  /* Wiring:
+   *  D0 (GPIO0, aka the 'boot' button on the Dev board) is used for
+   *   a 'home and de-power' manual control.
+   *  D2 (GPIO2) is connected to the onboard LED of the dev module
+   *   and used for the notification LED.
+   */
 #define LED 2    // On-Board LED pin
 #define BLINK 30 // On-Board LED blink time in ms
 
@@ -126,9 +142,13 @@ void setup(void){
   // Misc. hardware
   pinMode(LED, OUTPUT);
 
-#ifdef LIDAR
-  lidarStepper.setSpeed(STEPPER_RPM);
-#endif
+  #ifdef BUTTON
+    pinMode(BUTTON, INPUT_PULLUP); 
+  #endif
+
+  #ifdef LIDAR
+    lidarStepper.setSpeed(STEPPER_RPM);
+  #endif
 
   // Serial
   Serial.begin(115200);
@@ -136,7 +156,7 @@ void setup(void){
   Serial.println("Booting Sketch...");
 
   // Turn the LED on once serial begun
-  digitalWrite(LED, HIGH);          
+  digitalWrite(LED, HIGH); 
 
 #if ACCESSPOINT
   // Access point 
@@ -505,6 +525,7 @@ void handleData() {
     response["Step"] = currentStep;
     response["ScanStep"] = scanStep;
     response["ManualStep"] = manualStep;
+    response["ScanControl"] = scanControl;
   #else
     response["HasServo"] = false;
   #endif
@@ -596,14 +617,16 @@ void loop(void){
     #ifdef LIDAR
       // Deal with the (optional) active-low 'boot' button on the board.
       if (digitalRead(BUTTON) == LOW ) {
-        delay(50); // crude debounce
+        delay(50); // crude debounce delay..
         if (digitalRead(BUTTON) == LOW) {
           // home and disable stepper
+          digitalWrite(LED, HIGH); 
           stepTo(0);
           stepperOff();
           Serial.println("Homed via button");
           // wait for button release
           while(digitalRead(BUTTON) == LOW) delay(10);
+          digitalWrite(LED, LOW); 
         }
       }
     #endif
