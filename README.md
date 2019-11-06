@@ -50,6 +50,7 @@ If you are using a H-bridge driven Servo the default pins (easily changable in c
 7. **5v** and **GND** on the ESP32 are used for the stepper power supply; this places a reasonable demand on the USB power supply. Lockups and disconnects associated with motor movement are undoubtedly caused by the USB supply dipping and causing brownouts, use a decent PSU and cable.
 
 ### Demo setup
+The WebUI for the demo is optimised for mobile phone displays, I run the unit in AP mode and connect from my Mobile. This allows me to demo to others easily too. 
 ![The Prototype](/docs/lidar-rig.jpg)
 ![The results](/docs/status-panel.png)
 
@@ -60,6 +61,8 @@ https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 * stop using GET requests and move to a streaming protocol.
 
 ### Issues
+The scanning action is driven by successful sending of the data to the web client. Ti is affected by network timeouts, packet drops and delays, these will make the scan action intermittent and somewhat laggy.. This would be resolved by implementing the data stream/smp plans above.
+
 I have noticed the CMJU-531 I2C comms seem to lock up infrequently, and needed a full power cycle to resume. This has only happened when I'm ireflashing, rebooting and developing on this; it seems stable when left in operation and not being 'messed' with. 
 
 ### Base/Stand/Bracket
