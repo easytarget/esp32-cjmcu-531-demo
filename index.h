@@ -185,42 +185,41 @@ const char MAIN_page[] PROGMEM = R"=====(
   
   <script>
   
-    // Create the recurring interval task to refresh the distance value
+    // Create the recurring interval task to refresh the reading data 
     setInterval(function() {
-      getValues();
-    }, 200); // interval in ms.
+      getData();
+    }, 150); // interval in ms.
 
-    // Create the recurring interval task to refresh the info data 
-    setInterval(function() {
-      getInfo();
-    }, 333); // interval in ms.
-
-    // make a simple http request, return result, used to trigger actions from buttons
+    // make a simple http request and return result. Used to trigger actions from buttons
     function httpGet(theUrl)
     {
         var xmlHttp = new XMLHttpRequest();
-        xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+        xmlHttp.open( "GET", theUrl, true); // false for synchronous request
         xmlHttp.send( null );
         return xmlHttp.responseText;
     }
 
     // Loop to get, process and display value readings
-    var plotline = 0;
-    var plotscale = 20;
-    var timeout = 0;
+    var plotline = 0;       // history plot position
+    var plotscale = 20;     // scale factor for the simple plots
+    var timeout = 0;        // counts reading timeouts/failures
+    var mode = "NONE";      // we dont know mode initially
+    var haveLidar = false;  // assume no lidar untill it is reported as present
     
-    function getValues() {
+    function getData() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           var response = JSON.parse(this.responseText);
+
+          document.getElementById("statusText").innerHTML = this.responseText;
           document.getElementById("signal").innerHTML = "&nbsp;"; //some content is needed to prevent element collapsing
           if (response.RangeStatus < 0) {
             timeout = 0; // dont timeout while disabled
             document.getElementById("RANGEValue").innerHTML = "<span style=\"font-size: 80%;\">Disabled</span>";
             document.getElementById("RANGEValue").style.color = "#555";
           } else {
-            timeout++; // always increment the timeout, it will only reset when we have a valid range
+            timeout++; // always increment the timeout, it will only be reset when we have a valid range
             switch (response.RangeStatus) {
                 case 0:
                   timeout = 0; // valid range result, reset timeout counter
@@ -267,11 +266,24 @@ const char MAIN_page[] PROGMEM = R"=====(
             // if timeout reached, clear the range value.
             if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
           }
+          
           // If an angle field is present, display it.
           if (response.hasOwnProperty('Angle')) {
             document.getElementById("ANGLEValue").innerHTML = response.Angle;
             document.getElementById("ANGLEValue").innerHTML += "&deg;";
-          }        
+          }
+
+          // Detect and respond to mode changes
+          if (response.Mode != mode) {
+            mode = response.Mode;
+            setMode(response.Mode);
+          }
+
+          // Detect and enable stepper(lidar) functions
+          if ((response.HasServo == true) && !haveLidar) {  // stepper present but undetected?
+            haveLidar = true;
+            showLidar();
+          }
 
           // Plot the history histogram if we got a valid response
           if (response.RangeStatus == 0) {
@@ -302,7 +314,7 @@ const char MAIN_page[] PROGMEM = R"=====(
            }
         }
       }
-      xhttp.open("GET", "/range", true);
+      xhttp.open("GET", "/data", true);
       xhttp.send();
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
@@ -312,32 +324,6 @@ const char MAIN_page[] PROGMEM = R"=====(
         if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
       };
     }
-    
-    // Read and process the extended info, handle mode changes
-
-    var mode = "NONE";      // we dont know mode initially
-    var haveLidar = false;  // assume no lidar untill it is reported as present
-    
-    function getInfo() {
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          var response = JSON.parse(this.responseText);
-          document.getElementById("statusText").innerHTML = this.responseText;
-          if (response.Mode != mode) {  // mode changes
-            mode = response.Mode;
-            setMode(response.Mode);
-          }
-          if ((response.HasServo == true) && !haveLidar) {  // lidar present but undetected?
-            haveLidar = true;
-            showLidar();
-          }
-        }
-      }
-      xhttp.open("GET", "/info", true);
-      xhttp.send();
-      xhttp.timeout = 600; // time in milliseconds
-    };
 
     function showPlot() {
       document.getElementById("plot").style.display = "block";

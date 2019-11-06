@@ -184,8 +184,7 @@ void setup(void){
   server.on("/", handleRoot);           // Main page
 
   // Info requests
-  server.on("/range", handleRange);     // Update of distance and reading status
-  server.on("/info", handleInfo);       // more detailed sensor info
+  server.on("/data", handleData);     // Update of distance and status
 
   // Settings
   server.on("/near", handleNearMode);   // mode seting
@@ -452,6 +451,7 @@ void handleIntervalMinus()
     int newdelta = manualStep - 10;
     if (newdelta >= 1) manualStep = newdelta;
   }
+
   void handleScanStepPlus()
   {
     int newdelta;
@@ -471,28 +471,50 @@ void handleIntervalMinus()
   }
 #endif
 
-// Now come the actual reading requests/handlers
+// Now come the reading request + handler
 
-void handleRange() {
+void handleData() {
   String out;
-  StaticJsonDocument<50> range;
+  StaticJsonDocument<450> response;
   if (enabled == true)
   {
-    range["Distance"] = distanceSensor.getDistance();
-    range["RangeStatus"] = distanceSensor.getRangeStatus();
+    response["Distance"] = distanceSensor.getDistance();
+    response["RangeStatus"] = distanceSensor.getRangeStatus();
   }
   else
   {
-    range["Distance"] = -1;
-    range["RangeStatus"] = -1;
+    response["Distance"] = -1;
+    response["RangeStatus"] = -1;
   }
-  #ifdef LIDAR
-    range["Angle"] = roundf((currentStep * 10) / STEPS_PER_DEG)/10;
+  response["Mode"] = mode;
+  response["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
+  response["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
+  response["DistanceMode"] = distanceSensor.getDistanceMode();
+  response["ROIX"] = distanceSensor.getROIX();
+  response["ROIY"] = distanceSensor.getROIY();
+  response["SignalPerSpad"] = distanceSensor.getSignalPerSpad();
+  response["SpadNb"] = distanceSensor.getSpadNb();
+  response["AmbientRate"] = distanceSensor.getAmbientRate();
+  response["Offset"] = distanceSensor.getOffset();
+  response["SignalThreshold"] = distanceSensor.getSignalThreshold();
+  response["SigmaThreshold"] = distanceSensor.getSigmaThreshold();
+  response["XTalk"] = distanceSensor.getXTalk();
+  #ifdef LIDAR 
+    response["Angle"] = roundf((currentStep * 10) / STEPS_PER_DEG)/10;
+    response["HasServo"] = true;
+    response["Step"] = currentStep;
+    response["ScanStep"] = scanStep;
+    response["ManualStep"] = manualStep;
+  #else
+    response["HasServo"] = false;
   #endif
-  serializeJsonPretty(range, out);
+  char id [8]; sprintf(id, "0x%x", distanceSensor.getSensorID());
+  response["Sensor ID"] = id;
+  
+  serializeJsonPretty(response, out);
   server.send(200, "text/plain", out);
 
-  // Move and reverse etc when scanning.
+  // Move sensor in a sweep when scanning.
   #ifdef LIDAR
       if (enabled == true && scanControl == -1) {
             int newStep = currentStep - scanStep; 
@@ -513,38 +535,6 @@ void handleRange() {
             delay(40); // let stepper settle
       }
   #endif
-}
-
-void handleInfo()
-{
-  String out;
-  StaticJsonDocument<360> infostamp;
-  infostamp["Mode"] = mode;
-  infostamp["TimingBudgetInMs"] = distanceSensor.getTimingBudgetInMs();
-  infostamp["IntermeasurementPeriod"] = distanceSensor.getIntermeasurementPeriod();
-  infostamp["DistanceMode"] = distanceSensor.getDistanceMode();
-  infostamp["ROIX"] = distanceSensor.getROIX();
-  infostamp["ROIY"] = distanceSensor.getROIY();
-  infostamp["SignalPerSpad"] = distanceSensor.getSignalPerSpad();
-  infostamp["SpadNb"] = distanceSensor.getSpadNb();
-  infostamp["AmbientRate"] = distanceSensor.getAmbientRate();
-  infostamp["Offset"] = distanceSensor.getOffset();
-  infostamp["SignalThreshold"] = distanceSensor.getSignalThreshold();
-  infostamp["SigmaThreshold"] = distanceSensor.getSigmaThreshold();
-  infostamp["XTalk"] = distanceSensor.getXTalk();
-  #ifdef LIDAR 
-    infostamp["HasServo"] = true;
-    infostamp["Step"] = currentStep;
-    infostamp["ScanStep"] = scanStep;
-    infostamp["ManualStep"] = manualStep;
-  #else
-    infostamp["HasServo"] = false;
-  #endif
-  char id [8]; sprintf(id, "0x%x", distanceSensor.getSensorID());
-  infostamp["Sensor ID"] = id;
-
-  serializeJsonPretty(infostamp, out);
-  server.send(200, "text/plain", out);
 }
 
 //====================================
@@ -574,26 +564,26 @@ void usernotify(char message[]) {
   }
 
   // Disable the stepper, record pin state so we can recover exact position
-void stepperOff() {
-  delay(40); // wait for motor to settle, it drifts otherwise
-  for (byte p=0; p < 4; p++) 
-  {
-    stepState[p] = digitalRead(stepPin[p]);
-    digitalWrite(stepPin[p],LOW);
+  void stepperOff() {
+    delay(40); // wait for motor to settle, it drifts otherwise
+    for (byte p=0; p < 4; p++) 
+    {
+      stepState[p] = digitalRead(stepPin[p]);
+      digitalWrite(stepPin[p],LOW);
+    }
+    scanControl = 0; // stop any in-progress scans
+    stepperPwr = false;
   }
-  scanControl = 0; // stop any in-progress scans
-  stepperPwr = false;
-}
 
-// Enable the stepper, restore last pin state
-void stepperOn() {
-  for (byte p=0; p < 4; p++) 
-  {
-    digitalWrite(stepPin[p],stepState[p]);
+  // Enable the stepper, restore last pin state
+  void stepperOn() {
+    for (byte p=0; p < 4; p++) 
+    {
+      digitalWrite(stepPin[p],stepState[p]);
+    }
+    delay(20); // wait for motor to settle back into energised position
+    stepperPwr = true;
   }
-  delay(20); // wait for motor to settle back into energised position
-  stepperPwr = true;
-}
 #endif
 
 //====================================
