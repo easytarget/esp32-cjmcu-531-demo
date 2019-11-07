@@ -184,11 +184,15 @@ const char MAIN_page[] PROGMEM = R"=====(
   <!-- The scripting -->
   
   <script>
+
+    // Master interval (update rate) setting.
+    updateInterval = 250;
+    minUpdateInterval = 200; // fastest we can go, even at higher sensor speeds
   
     // Create the recurring interval task to refresh the reading data 
     setInterval(function() {
       getData();
-    }, 150); // interval in ms.
+    }, updateInterval); // interval in ms. -- 5 reading requests/second
 
     // make a simple http request and return result. Used to trigger actions from buttons
     function httpGet(theUrl)
@@ -279,6 +283,13 @@ const char MAIN_page[] PROGMEM = R"=====(
             mode = response.Mode;
             setMode(response.Mode);
           }
+
+          // Adjust update interval based on Intermeasurement period (sensor reading speed).
+          var lastInterval = response.IntermeasurementPeriod + 50;
+          if (lastInterval > minUpdateInterval) {
+            updateInterval = lastInterval;
+          }
+           
 
           // Detect and enable stepper(lidar) functions
           if ((response.HasServo == true) && !haveLidar) {  // stepper present but undetected?
