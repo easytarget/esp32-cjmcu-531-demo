@@ -187,7 +187,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 
     // Master interval (update rate) setting.
     updateInterval = 250;
-    minUpdateInterval = 200; // fastest we can go, even at higher sensor speeds
+    minUpdateInterval = 100; // fastest we can go, even at higher sensor speeds
   
     // Create the recurring interval task to refresh the reading data 
     setInterval(function() {
@@ -198,9 +198,8 @@ const char MAIN_page[] PROGMEM = R"=====(
     function httpGet(theUrl)
     {
         var xmlHttp = new XMLHttpRequest();
-        xmlHttp.open( "GET", theUrl, true); // false for synchronous request
+        xmlHttp.open( "GET", theUrl, true); // asynchronous, and we dont care about return.
         xmlHttp.send( null );
-        return xmlHttp.responseText;
     }
 
     // Loop to get, process and display value readings
@@ -330,10 +329,12 @@ const char MAIN_page[] PROGMEM = R"=====(
       xhttp.send();
       xhttp.timeout = 300; // time in milliseconds
       xhttp.ontimeout = function () {
-        document.getElementById("signal").innerHTML = "Network Timeout";
         timeout++; // increment timeout counter
-        // if timeout reached, clear the range value
-        if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
+        // if 4xtimeout reached without any valid replies, clear the range value
+        if (timeout > 4) {
+          document.getElementById("RANGEValue").innerHTML = "n/a";
+          document.getElementById("signal").innerHTML = "Network Timeout";
+        };
       };
     }
 

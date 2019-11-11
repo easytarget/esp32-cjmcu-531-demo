@@ -203,9 +203,6 @@ void setup(void){
   // HTTP request responders
   server.on("/", handleRoot);           // Main page
 
-  // Info requests
-  server.on("/data", handleData);     // Update of distance and status
-
   // Settings
   server.on("/near", handleNearMode);   // mode seting
   server.on("/mid", handleMidMode);     // mode seting
@@ -235,7 +232,10 @@ void setup(void){
     server.on("/s-scanplus", handleScanStepPlus);     // increase scan delta
     server.on("/s-scanminus", handleScanStepMinus);   // decrease scan delta
   #endif
-  
+
+  // Info requests
+  server.on("/data", handleData);     // Update of distance and status
+
   // Start web server
   server.begin();
   Serial.println("HTTP server started");
@@ -631,5 +631,4 @@ void loop(void){
       }
     #endif
   #endif
-  delay(1);
 }
