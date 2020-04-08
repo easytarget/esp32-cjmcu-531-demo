@@ -20,7 +20,7 @@
 // https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 #include <SparkFun_VL53L1X.h>
 
-// Comment out to disable servo (lidar) functionality and UI
+// Comment out to disable servo (lidar) functionality
 #define LIDAR
 
 // Embedded web page kept in a header file (& stored in progmem)
@@ -131,7 +131,7 @@ SFEVL53L1X distanceSensor;
 #define LED 2    // On-Board LED pin
 #define BLINK 30 // On-Board LED blink time in ms
 
-#define BUTTON 0 // On-Board button, aka 'boot', manual home and power off, comment out to disable.
+#define BUTTON 0 // 'Boot' button (homes the stepper), comment out to disable.
 
 
 //===============================================================
@@ -584,7 +584,7 @@ void usernotify(char message[]) {
      }
   }
 
-  // Disable the stepper, record pin state so we can recover exact position
+  // Disable the stepper, record pin state for when we re-enable
   void stepperOff() {
     delay(40); // wait for motor to settle, it drifts otherwise
     for (byte p=0; p < 4; p++) 
@@ -607,6 +607,30 @@ void usernotify(char message[]) {
   }
 #endif
 
+#ifdef BUTTON
+  void handleButton() {
+    // Button sensing and handling goes here, currently it homes the sensor..
+    if (digitalRead(BUTTON) == LOW ) {
+      delay(50); // crude debounce delay..
+      if (digitalRead(BUTTON) == LOW) {
+        // home and disable stepper
+        digitalWrite(LED, HIGH); 
+        #ifdef LIDAR
+          stepTo(0);
+          stepperOff();
+          Serial.println("Stepper homed and disabled via button");
+        #else
+          Serial.println("Info: Button pressed");
+        #endif
+        // wait for button release
+        while(digitalRead(BUTTON) == LOW) delay(10);
+        digitalWrite(LED, LOW); 
+      }
+    }
+  }
+#endif
+    
+
 //====================================
 // Main Loop (invokes client handler)
 //====================================
@@ -614,21 +638,6 @@ void usernotify(char message[]) {
 void loop(void){
   server.handleClient();
   #ifdef BUTTON
-    #ifdef LIDAR
-      // Deal with the (optional) active-low 'boot' button on the board.
-      if (digitalRead(BUTTON) == LOW ) {
-        delay(50); // crude debounce delay..
-        if (digitalRead(BUTTON) == LOW) {
-          // home and disable stepper
-          digitalWrite(LED, HIGH); 
-          stepTo(0);
-          stepperOff();
-          Serial.println("Homed via button");
-          // wait for button release
-          while(digitalRead(BUTTON) == LOW) delay(10);
-          digitalWrite(LED, LOW); 
-        }
-      }
-    #endif
+    handleButton();
   #endif
 }

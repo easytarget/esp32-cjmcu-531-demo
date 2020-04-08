@@ -174,7 +174,7 @@ const char MAIN_page[] PROGMEM = R"=====(
         </div>
       </span>
     </div>
-    <span id="statusPanel" class="expander" style="display: none; text-align: left;">
+    <span id="statusPanel" class="expander" style="display: none; text-align: left; cursor: auto;">
     <pre style="font-size: 110%; font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
     Connecting..</pre></span>
     <div style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
