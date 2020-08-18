@@ -1,3 +1,5 @@
+[![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)](https://travis-ci.org/github/easytarget/esp32-cjmcu-531-demo) `- Master branch status`
+
 # CJMCU-531 and ESP32 Demo using a VL53L1X library and Ajax to display on a self-hosted site.
 ## A crude, slow(ish), low fidelity Lidar system
  
@@ -65,6 +67,12 @@ https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 * Move to the Official ST micro libs
 * SMP: handle sensor+servo on different core than the web server.
 * stop using GET requests and move to a streaming protocol.
+
+#### Contributing
+* Fork the repo
+* Make a branch with a sensible nraeme in your forked repo and commit changes to that
+* Make a PR in this repo against your remote fork and branch
+* Explain what you are doing and don't be slapdash.. I hate random.
 
 ### Issues
 The scanning action is driven by successful sending of the data to the web client. It is affected by network timeouts, packet drops and delays, these will make the scan action intermittent and somewhat laggy.. This would be resolved by implementing the data stream/smp plans above.
