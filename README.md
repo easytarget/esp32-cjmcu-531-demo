@@ -1,4 +1,4 @@
-Master Status: ![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)
+[![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)](https://travis-ci.org/github/easytarget/esp32-cjmcu-531-demo)
 
 # CJMCU-531 and ESP32 Demo using a VL53L1X library and Ajax to display on a self-hosted site.
 ## A crude, slow(ish), low fidelity Lidar system
