@@ -25,6 +25,7 @@ I have been pleasently surprised that the results are better than I expected; th
 * For the LIDAR scan mechanism I have a 5V stepper motor with gearbox, plus the H-Bridge control board supplied with it. These are very common and can be found on AliExpress, Ebay, hobby electronics stores etc. for a couple of Euros.
 
 #### Software:
+![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)
 The following libraries are not installed as standard in the Arduino IDE but are searchable and installable from within the library manager.
 * Sparkfun VL53L1X library: https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 * ArduinoJson library (v1.6+): https://arduinojson.org/
