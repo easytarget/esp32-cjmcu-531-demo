@@ -1,3 +1,5 @@
+Master Status: ![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)
+
 # CJMCU-531 and ESP32 Demo using a VL53L1X library and Ajax to display on a self-hosted site.
 ## A crude, slow(ish), low fidelity Lidar system
  
@@ -25,7 +27,6 @@ I have been pleasently surprised that the results are better than I expected; th
 * For the LIDAR scan mechanism I have a 5V stepper motor with gearbox, plus the H-Bridge control board supplied with it. These are very common and can be found on AliExpress, Ebay, hobby electronics stores etc. for a couple of Euros.
 
 #### Software:
-![CI Status](https://travis-ci.org/easytarget/esp32-cjmcu-531-demo.svg?branch=master)
 The following libraries are not installed as standard in the Arduino IDE but are searchable and installable from within the library manager.
 * Sparkfun VL53L1X library: https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 * ArduinoJson library (v1.6+): https://arduinojson.org/
@@ -66,6 +67,12 @@ https://github.com/easytarget/esp32-cjmcu-531-demo/issues
 * Move to the Official ST micro libs
 * SMP: handle sensor+servo on different core than the web server.
 * stop using GET requests and move to a streaming protocol.
+
+#### Contributing
+* Fork the repo
+* Make a branch with a sensible neme in your fork and commit changes to that
+* Make a PR in this repo against your remote fork and branch
+* Explain what you are doing and don't be slapdash.. I hate random.
 
 ### Issues
 The scanning action is driven by successful sending of the data to the web client. It is affected by network timeouts, packet drops and delays, these will make the scan action intermittent and somewhat laggy.. This would be resolved by implementing the data stream/smp plans above.
