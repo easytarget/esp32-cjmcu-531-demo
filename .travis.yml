@@ -19,14 +19,13 @@ before_script:
   - git submodule update --init --recursive
   - cd tools
   - python get.py
-  - cd $HOME/arduino_ide/libraries
-  - git clone https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library.git
   
 script:
   - cd $TRAVIS_BUILD_DIR
   - export PATH="$HOME/arduino_ide:$PATH"
   - arduino --board esp32:esp32:esp32:PartitionScheme=min_spiffs,FlashFreq=40 --pref compiler.warning_level=all --save-prefs
   - arduino --install-library ArduinoJson
+  - arduino --install-library "SparkFun VL53L1X 4m Laser Distance Sensor"
   - arduino --verbose --verify esp32-cjmcu-531-demo.ino
   - cp --preserve --verbose  mywifi.sample.h mywifi.h
   - arduino --verbose --verify esp32-cjmcu-531-demo.ino
