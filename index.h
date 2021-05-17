@@ -5,7 +5,16 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!-- Page served by ESP32 CJMCU-531 demo; see https://github.com/easytarget/esp32-cjmcu-531-demo/ 
      Design/Coding by Owen; https://easytarget.org/ -->
 
-<!-- Begin with style -->
+<!-- Top -->
+<head>
+  <title>ESP32/VL53L1X display and control demo</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=380, initial-scale=1" />
+  <meta http-equiv="Cache-control" content="no-cache">
+</head>
+
+
+<!-- Continue with style -->
 <style>
   a{
     color: #555;
@@ -15,6 +24,10 @@ const char MAIN_page[] PROGMEM = R"=====(
     border-color: #056016;
     background-color: #056016;
     width: 100%;
+    clear: both;
+  }
+  div{
+    clear:both;
   }
   .canvases{
     width: 320px;
@@ -75,39 +88,37 @@ const char MAIN_page[] PROGMEM = R"=====(
   }
 </style>
 
-<!-- Top -->
-<head>
-  <title>ESP32/VL53L1X display and control demo</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=380, initial-scale=1" />
-  <meta http-equiv="Cache-control" content="no-cache">
-</head>
-
 <!-- The page itself -->
 <body>
   <div class="card">
     <h3 style="text-align: center;">ESP32/VL53L1X Demo</h3>
     <hr> 
     <div id="signal" class="signal">Comms Timeout</div>
-    <div><span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">connecting..</span>
-      <span style="float: left; font-size: 160%;font-weight: bold;">Range:</span></div><hr>
-    <div><span id="MODEValue"style="float: right; font-weight: bold;">unknown</span>&nbsp;
-      <span style="float: left;font-weight: bold;">Mode:</span></div>
-    <div class="lidar"><span id="ANGLEValue" style="float: right; font-weight: bold;">
-      Unknown</span>
-      <span style="float: left; font-weight: bold;">Lidar Angle:</span></div><hr>
-      
-    <span class="lidar"><canvas class="canvases" id="scan" onclick="hideScan()" width=320 height=240>
-    This is a Canvas Element, if it is not displayed then we apologize, your browser 
-    is not compatible.</canvas>
-    <div class="expander" id="scanControl" onclick="showScan()"style="font-size: 110%; font-weight: bold;">show scan</div>
-    <div class="expander" id="scanClear" onclick="clearScan()" style="font-size: 90%; display: none;">
-    clear scan</div></span>
+    <div>
+      <span style="float: left; font-size: 160%;font-weight: bold;">Range:</span>
+      <span id="RANGEValue" style="float: right; font-size: 200%;font-weight: bold;">connecting..</span>
+    </div>
+    <hr>
+    <div>
+      <span style="float: left;font-weight: bold;">Mode:</span>
+      <span id="MODEValue"style="float: right; font-weight: bold;">unknown</span>
+    </div>
+    <div class="lidar">
+      <span style="float: left; font-weight: bold;">Lidar Angle:</span>
+      <span id="ANGLEValue" style="float: right; font-weight: bold;">Unknown</span>
+    </div>
+    <hr>
+    <span class="lidar">
+      <canvas class="canvases" id="scan" onclick="hideScan()" width=320 height=240>
+        This is a Canvas Element, if it is not displayed then we apologize, your browser is not compatible.
+      </canvas>
+      <div class="expander" id="scanControl" onclick="showScan()"style="font-size: 110%; font-weight: bold;">show scan</div>
+      <div class="expander" id="scanClear" onclick="clearScan()" style="font-size: 90%; display: none;">clear scan</div>
+    </span>
     <canvas class="canvases" id="plot" onclick="hidePlot()" width=320 height=240>
-    This is a Canvas Element, if it is not displayed then we apologize, your browser 
-    is not compatible.</canvas>
+      This is a Canvas Element, if it is not displayed then we apologize, your browser is not compatible.
+    </canvas>
     <div class="expander" id="plotControl" onclick="showPlot()" style="font-size: 110%; font-weight: bold;">show history</div>
-
     <hr>
     <div style="text-align: left;">
       Sensor&nbsp;::<button class="button" onclick="httpGet('/on')"
@@ -134,9 +145,9 @@ const char MAIN_page[] PROGMEM = R"=====(
               title="Swing the sensor right">Right</button>
     </div>
     <div>
-      <h3 onclick="showControlPanel()" id="showControl" 
-        class="expander">
-      more control</h3>
+      <h3 onclick="showControlPanel()" id="showControl" class="expander">
+        more control
+      </h3>
       <span id="controlPanel" style="display: none;">
         <h3 onclick="hideControlPanel()" class="expander">
           less control
@@ -175,10 +186,13 @@ const char MAIN_page[] PROGMEM = R"=====(
       </span>
     </div>
     <span id="statusPanel" class="expander" style="display: none; text-align: left; cursor: auto;">
-    <pre style="font-size: 110%; font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
-    Connecting..</pre></span>
-    <div style="text-align: center;">::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" 
-    title="Project home repo">GitHub</a>::</div>
+      <pre style="font-size: 110%; font-weight: bold;">Status::</pre><pre id="statusText" style="font-weight: normal;">
+        Connecting..
+      </pre>
+    </span>
+    <div style="text-align: center;">
+      ::<a href="https://github.com/easytarget/esp32-cjmcu-531-demo/" title="Project home repo">GitHub</a>::
+    </div>
   </div>
 
   <!-- The scripting -->
@@ -208,7 +222,7 @@ const char MAIN_page[] PROGMEM = R"=====(
     var timeout = 0;        // counts reading timeouts/failures
     var mode = "NONE";      // we dont know mode initially
     var haveLidar = false;  // assume no lidar untill it is reported as present
-    
+
     function getData() {
       var xhttp = new XMLHttpRequest();
       xhttp.onreadystatechange = function() {
@@ -269,7 +283,7 @@ const char MAIN_page[] PROGMEM = R"=====(
             // if timeout reached, clear the range value.
             if (timeout > 10) document.getElementById("RANGEValue").innerHTML = "n/a";
           }
-          
+
           // If an angle field is present, display it.
           if (response.hasOwnProperty('Angle')) {
             document.getElementById("ANGLEValue").innerHTML = response.Angle;
@@ -288,7 +302,6 @@ const char MAIN_page[] PROGMEM = R"=====(
           if (lastInterval > minUpdateInterval) {
             updateInterval = lastInterval;
           }
-           
 
           // Detect and enable stepper(lidar) functions
           if ((response.HasServo == true) && !haveLidar) {  // stepper present but undetected?
