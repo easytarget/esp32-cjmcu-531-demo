@@ -24,7 +24,7 @@
 #define LIDAR
 
 // Embedded web page kept in a header file (& stored in progmem)
-#include "index.h"    
+#include "index.h"
 
 // Sensor setup; see:
 // https://learn.sparkfun.com/tutorials/qwiic-distance-sensor-vl53l1x-hookup-guide#library-overview
