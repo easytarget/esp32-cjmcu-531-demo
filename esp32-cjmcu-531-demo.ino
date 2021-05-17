@@ -158,7 +158,7 @@ void setup(void){
   // Turn the LED on once serial begun
   digitalWrite(LED, HIGH); 
 
-#if ACCESSPOINT
+#ifdef ACCESSPOINT
   // Access point 
   IPAddress ourIP(ACCESSPOINTIP);
   IPAddress ourMask(ACCESSPOINTMASK);
