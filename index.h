@@ -91,7 +91,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 <!-- The page itself -->
 <body>
   <div class="card">
-    <h3 style="text-align: center;">ESP32/VL53L1X Demo</h3>
+    <h3 id="MyName" style="text-align: center;">ESP32/VL53L1X Demo</h3>
     <hr> 
     <div id="signal" class="signal">Comms Timeout</div>
     <div>
@@ -335,7 +335,13 @@ const char MAIN_page[] PROGMEM = R"=====(
               var scanY = Math.floor(Math.cos(rad)*scanValue);
               scan.fillStyle = "#DDDDDD";
               scan.fillRect(ScanXYRadius+scanX, ScanXYRadius-scanY, 3, 3);
-           }
+          }
+
+          // If an Name field is present, use it.
+          if (response.hasOwnProperty('Name')) {
+            document.getElementById("MyName").innerHTML = response.Name;
+          }
+
         }
       }
       xhttp.open("GET", "/data", true);

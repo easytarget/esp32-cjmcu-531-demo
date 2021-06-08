@@ -15,6 +15,7 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
+#include <ArduinoOTA.h>
 
 // Currently using the SparkFun library for the sensor: 
 // https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
@@ -23,7 +24,7 @@
 // Comment out to disable servo (lidar) functionality
 #define LIDAR
 
-// Embedded web page kept in a header file (& stored in progmem)
+// Embedded web page is kept in a seperate header file (& stored in progmem)
 #include "index.h"
 
 // Sensor setup; see:
@@ -49,6 +50,18 @@ String mode = "mid"; // range mode
   #define ACCESSPOINTMASK 255,255,255,1
   const char* ssid = "VL53L1X-demo";
   const char* password = ""; // no password == very insecure, but very easy to demo
+#endif
+
+#if defined (DEVICENAME)
+  String myName = DEVICENAME;
+#else
+  String myName = "ESP32/VL53L1X Demo";
+#endif
+
+#if defined(NO_OTA)
+    bool otaEnabled = false;
+#else
+    bool otaEnabled = true;
 #endif
 
 // Webserver
@@ -153,52 +166,98 @@ void setup(void){
   // Serial
   Serial.begin(115200);
   Serial.println();
+  Serial.println(myName);
   Serial.println("Booting Sketch...");
 
   // Turn the LED on once serial begun
   digitalWrite(LED, HIGH); 
 
-#ifdef ACCESSPOINT
-  // Access point 
-  IPAddress ourIP(ACCESSPOINTIP);
-  IPAddress ourMask(ACCESSPOINTMASK);
-  WiFi.mode(WIFI_AP); //Access Point mode
-  WiFi.softAP(ssid, password);
-  WiFi.softAPConfig(ourIP, ourIP, ourMask);
-  Serial.print("Access Point started: ");
-  Serial.print(ssid);
-  Serial.print(":");
-  Serial.println(password);
-  Serial.print("AP Address: ");
-  Serial.println(WiFi.softAPIP());
-#else
-  // Connect to existing wifi
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to: ");
-  Serial.println(ssid);
-  //Wait for WiFi to connect
-  int aline = 0;
-  while(WiFi.waitForConnectResult() != WL_CONNECTED)
-  {      
-    delay(1000);
-    aline++;
-    if (aline > 80) {
-      aline = 0;
-      Serial.println(".");
-    }
-    else
+  // Disable power saving on WiFi to improve responsiveness
+  // (https://github.com/espressif/arduino-esp32/issues/1484)
+  WiFi.setSleep(false);
+
+  #ifdef ACCESSPOINT
+    // Access point
+    IPAddress ourIP(ACCESSPOINTIP);
+    IPAddress ourMask(ACCESSPOINTMASK);
+    WiFi.mode(WIFI_AP); //Access Point mode
+    WiFi.softAP(ssid, password);
+    WiFi.softAPConfig(ourIP, ourIP, ourMask);
+    Serial.print("Access Point started: ");
+    Serial.print(ssid);
+    Serial.print(":");
+    Serial.println(password);
+    Serial.print("AP Address: ");
+    Serial.println(WiFi.softAPIP());
+  #else
+    // Connect to existing wifi
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to: ");
+    Serial.println(ssid);
+    //Wait for WiFi to connect
+    int aline = 0;
+    while(WiFi.waitForConnectResult() != WL_CONNECTED)
     {
-      Serial.print(".");
+      delay(1000);
+      aline++;
+      if (aline > 80) {
+        aline = 0;
+        Serial.println(".");
+      }
+      else
+      {
+        Serial.print(".");
+      }
     }
-  } 
-  //If connection successful show IP address in serial monitor
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());  //IP address assigned to your ESP
-#endif
+    //If connection successful show IP address in serial monitor
+    Serial.println("");
+    Serial.print("Connected to ");
+    Serial.println(ssid);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());  //IP address assigned to your ESP
+  #endif
+
+  if (otaEnabled) {
+    // Start OTA once connected
+    Serial.println("Setting up OTA");
+    // Port defaults to 3232
+    // ArduinoOTA.setPort(3232);
+    // Hostname defaults to esp3232-[MAC]
+    ArduinoOTA.setHostname(myName.c_str());
+    // No authentication by default
+    #if defined (OTA_PASSWORD)
+      ArduinoOTA.setPassword(OTA_PASSWORD);
+      Serial.printf("OTA Password: %s\n\r", OTA_PASSWORD);
+    #endif
+    ArduinoOTA
+      .onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH)
+          type = "sketch";
+        else // U_SPIFFS
+          type = "filesystem";
+        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+        Serial.println("Start updating " + type);
+      })
+      .onEnd([]() {
+        Serial.println("\nEnd");
+      })
+      .onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+      })
+      .onError([](ota_error_t error) {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+        else if (error == OTA_END_ERROR) Serial.println("End Failed");
+      });
+    ArduinoOTA.begin();
+  } else {
+    Serial.println("OTA is disabled");
+  }
 
   // HTTP request responders
   server.on("/", handleRoot);           // Main page
@@ -530,7 +589,8 @@ void handleData() {
     response["HasServo"] = false;
   #endif
   char id [8]; sprintf(id, "0x%x", distanceSensor.getSensorID());
-  response["Sensor ID"] = id;
+  response["SensorID"] = id;
+  response["Name"] = myName;
   
   serializeJsonPretty(response, out);
   server.send(200, "text/plain", out);
@@ -637,6 +697,7 @@ void usernotify(char message[]) {
 
 void loop(void){
   server.handleClient();
+  if (otaEnabled) ArduinoOTA.handle();
   #ifdef BUTTON
     handleButton();
   #endif
