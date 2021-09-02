@@ -8,9 +8,9 @@ os:
 before_script:
   - "export DISPLAY=:99.0"
   - sleep 3 # give xvfb some time to start
-  - wget http://downloads.arduino.cc/arduino-1.8.13-linux64.tar.xz
-  - tar xf arduino-1.8.13-linux64.tar.xz
-  - mv arduino-1.8.13 $HOME/arduino_ide
+  - wget http://downloads.arduino.cc/arduino-1.8.15-linux64.tar.xz
+  - tar xf arduino-1.8.15-linux64.tar.xz
+  - mv arduino-1.8.15 $HOME/arduino_ide
   - cd $HOME/arduino_ide/hardware
   - mkdir esp32
   - cd esp32
