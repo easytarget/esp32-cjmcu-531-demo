@@ -25,13 +25,13 @@ I have been pleasently surprised that the results are better than I expected; th
 * For the LIDAR scan mechanism I have a 5V stepper motor with gearbox, plus the H-Bridge control board supplied with it. These are very common and can be found on AliExpress, Ebay, hobby electronics stores etc. for a couple of Euros.
 
 #### Software:
-I use the standard Arduino IDE to develop and program the unit. You need to install the ESP development board definitions and libraries using the instructions at https://github.com/espressif/arduino-esp32/blob/master/docs/arduino-ide/boards_manager.md
+I use the standard Arduino IDE to develop and program the unit. You need to install the ESP development board definitions and libraries using the instructions at https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 
 The following 3rd party libraries are needed. They are not installed as standard in the Arduino IDE but are searchable and installable from within the library manager.
 * Sparkfun VL53L1X library: https://github.com/sparkfun/SparkFun_VL53L1X_Arduino_Library/
 * ArduinoJson library (v1.6+): https://arduinojson.org/
 
-Select the dev board you are using from the boards manager list (normally the default generic ESP32 dev board entry, no special memory or other configuration needed)
+Select the dev board you are using from the boards manager list (normally the default generic ESP32 dev board entry) and select 'Minimal SPIFFS (1.9MB app with OTA..)' as your partition table type unless you have disabled Over The Air updates. See [this](/docs/programming.png).
 
 By default the unit will create a passwordless AccessPoint named `VL53L1X-demo`, you can connect to that and browse to `http://192,168,4,1/` to see the demo. Alternatively rename the file `mywifi.sample.h` to `mywifi.h` and fill in your own details to connect to existing networks or make a more secure AP.
 
