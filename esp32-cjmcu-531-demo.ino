@@ -622,8 +622,8 @@ void handleData() {
 // Other functions (eg stepper handlers)
 //====================================
 
-// flash led and dump a message to serial to log actions
-void usernotify(char message[]) {
+// flash led and dump a message to log actions
+void usernotify(const char message[]) {
   digitalWrite(LED, HIGH);   
   Serial.println(message);
   delay(BLINK);
@@ -674,17 +674,15 @@ void usernotify(char message[]) {
       delay(50); // crude debounce delay..
       if (digitalRead(BUTTON) == LOW) {
         // home and disable stepper
-        digitalWrite(LED, HIGH); 
         #ifdef LIDAR
           stepTo(0);
           stepperOff();
-          Serial.println("Stepper homed and disabled via button");
+          usernotify("Stepper homed and disabled via button");
         #else
-          Serial.println("Info: Button pressed");
+          usernotify("Info: Button pressed");
         #endif
         // wait for button release
         while(digitalRead(BUTTON) == LOW) delay(10);
-        digitalWrite(LED, LOW); 
       }
     }
   }
