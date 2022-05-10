@@ -286,7 +286,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 
           // If an angle field is present, display it.
           if (response.hasOwnProperty('Angle')) {
-            document.getElementById("ANGLEValue").innerHTML = response.Angle;
+            document.getElementById("ANGLEValue").innerHTML = response.Angle.toFixed(1);
             document.getElementById("ANGLEValue").innerHTML += "&deg;";
             if (response.ScanControl != 0) document.getElementById("ANGLEValue").innerHTML += " (scanning)";
           }

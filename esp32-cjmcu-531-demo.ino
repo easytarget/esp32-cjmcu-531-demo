@@ -579,7 +579,7 @@ void handleData() {
   response["SigmaThreshold"] = distanceSensor.getSigmaThreshold();
   response["XTalk"] = distanceSensor.getXTalk();
   #ifdef LIDAR 
-    response["Angle"] = roundf((currentStep * 10) / STEPS_PER_DEG)/10;
+    response["Angle"] = currentStep / STEPS_PER_DEG;
     response["HasServo"] = true;
     response["Step"] = currentStep;
     response["ScanStep"] = scanStep;
